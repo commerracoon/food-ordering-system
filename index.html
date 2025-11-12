@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Ordering System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🍔 Food Ordering System</h1>
+            <div class="cart-icon" onclick="toggleCart()">
+                🛒 Cart (<span id="cart-count">0</span>)
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Categories Sidebar -->
+            <aside class="categories-sidebar">
+                <h2>Categories</h2>
+                <div id="categories-list"></div>
+            </aside>
+
+            <!-- Menu Items -->
+            <main class="menu-section">
+                <h2 id="section-title">All Items</h2>
+                <div id="menu-items" class="menu-grid"></div>
+            </main>
+
+            <!-- Cart Sidebar -->
+            <aside class="cart-sidebar" id="cart-sidebar">
+                <div class="cart-header">
+                    <h2>Your Cart</h2>
+                    <button class="close-btn" onclick="toggleCart()">✕</button>
+                </div>
+                <div id="cart-items"></div>
+                <div class="cart-footer">
+                    <div class="cart-total">
+                        <strong>Total:</strong>
+                        <span id="cart-total">$0.00</span>
+                    </div>
+                    <button class="checkout-btn" onclick="showCheckout()">Checkout</button>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div id="checkout-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCheckout()">&times;</span>
+            <h2>Checkout</h2>
+            <form id="checkout-form">
+                <div class="form-group">
+                    <label for="customer-name">Name:</label>
+                    <input type="text" id="customer-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="customer-phone">Phone:</label>
+                    <input type="tel" id="customer-phone">
+                </div>
+                <div class="order-summary">
+                    <h3>Order Summary</h3>
+                    <div id="checkout-items"></div>
+                    <div class="checkout-total">
+                        <strong>Total:</strong>
+                        <span id="checkout-total">$0.00</span>
+                    </div>
+                </div>
+                <button type="submit" class="submit-btn">Place Order</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="success-modal" class="modal">
+        <div class="modal-content success">
+            <h2>✅ Order Placed Successfully!</h2>
+            <p>Your order #<span id="order-number"></span> has been received.</p>
+            <button onclick="closeSuccess()" class="submit-btn">Continue Shopping</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
