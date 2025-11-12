@@ -6,16 +6,63 @@ let menuItems = [];
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
+    checkUserSession();
     loadCategories();
     loadMenu();
     setupCheckoutForm();
 });
 
+// Check user session
+function checkUserSession() {
+    const userName = localStorage.getItem('userName');
+    const userType = localStorage.getItem('userType');
+
+    if (userName) {
+        document.getElementById('user-info').textContent = `Welcome, ${userName}!`;
+        document.getElementById('user-info').style.display = 'block';
+        document.getElementById('login-btn').style.display = 'none';
+        document.getElementById('logout-btn').style.display = 'block';
+    } else {
+        document.getElementById('user-info').style.display = 'none';
+        document.getElementById('login-btn').style.display = 'block';
+        document.getElementById('logout-btn').style.display = 'none';
+    }
+}
+
+// Logout function
+async function logout() {
+    const userType = localStorage.getItem('userType') || 'user';
+    const endpoint = userType === 'admin' ? '/admin/logout' : '/user/logout';
+
+    try {
+        await fetch(`${API_URL}${endpoint}`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userType');
+
+    Swal.fire({
+        icon: 'success',
+        title: 'Logged Out',
+        text: 'You have been logged out successfully.',
+        timer: 2000,
+        showConfirmButton: false
+    });
+
+    checkUserSession();
+}
+
 // Load categories
 async function loadCategories() {
     try {
-        const response = await fetch(`${API_URL}/categories`);
-        categories = await response.json();
+        const response = await fetch(`${API_URL}/order/categories`);
+        const data = await response.json();
+        categories = data.categories || [];
         
         const categoriesList = document.getElementById('categories-list');
         categoriesList.innerHTML = `
@@ -33,18 +80,28 @@ async function loadCategories() {
         });
     } catch (error) {
         console.error('Error loading categories:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to load categories. Please try again.',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000
+        });
     }
 }
 
 // Load menu items
 async function loadMenu(categoryId = null) {
     try {
-        const url = categoryId 
-            ? `${API_URL}/menu?category_id=${categoryId}`
-            : `${API_URL}/menu`;
-        
+        const url = categoryId
+            ? `${API_URL}/order/menu?category_id=${categoryId}`
+            : `${API_URL}/order/menu`;
+
         const response = await fetch(url);
-        menuItems = await response.json();
+        const data = await response.json();
+        menuItems = data.menu_items || [];
         
         displayMenuItems(menuItems);
     } catch (error) {
@@ -97,9 +154,9 @@ function filterByCategory(categoryId, categoryName = 'All Items') {
 function addToCart(itemId) {
     const item = menuItems.find(i => i.id === itemId);
     if (!item) return;
-    
+
     const existingItem = cart.find(i => i.id === itemId);
-    
+
     if (existingItem) {
         existingItem.quantity++;
     } else {
@@ -110,8 +167,20 @@ function addToCart(itemId) {
             quantity: 1
         });
     }
-    
+
     updateCart();
+
+    // SweetAlert2 toast notification
+    Swal.fire({
+        icon: 'success',
+        title: 'Added to cart!',
+        text: `${item.name} has been added to your cart`,
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: true
+    });
 }
 
 // Update cart display
@@ -178,7 +247,12 @@ function toggleCart() {
 // Checkout
 function showCheckout() {
     if (cart.length === 0) {
-        alert('Your cart is empty!');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Cart is Empty',
+            text: 'Please add some items to your cart first!',
+            confirmButtonColor: '#ff6b6b'
+        });
         return;
     }
 
@@ -241,10 +315,26 @@ function setupCheckoutForm() {
             const result = await response.json();
 
             if (response.ok) {
-                // Show success modal
-                document.getElementById('order-number').textContent = result.order_id;
+                // Close checkout modal
                 document.getElementById('checkout-modal').classList.remove('show');
-                document.getElementById('success-modal').classList.add('show');
+
+                // Show success with SweetAlert2
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Order Placed Successfully!',
+                    html: `
+                        <p class="text-lg">Your order #<strong>${result.order_id}</strong> has been received.</p>
+                        <p class="text-gray-600 mt-2">Thank you for your order!</p>
+                    `,
+                    confirmButtonText: 'Continue Shopping',
+                    confirmButtonColor: '#4ecdc4',
+                    showClass: {
+                        popup: 'animate__animated animate__bounceIn'
+                    },
+                    hideClass: {
+                        popup: 'animate__animated animate__fadeOut'
+                    }
+                });
 
                 // Clear cart
                 cart = [];
@@ -254,11 +344,21 @@ function setupCheckoutForm() {
                 // Reset form
                 form.reset();
             } else {
-                alert('Error placing order: ' + result.error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Order Failed',
+                    text: result.error || 'Failed to place order. Please try again.',
+                    confirmButtonColor: '#ff6b6b'
+                });
             }
         } catch (error) {
             console.error('Error placing order:', error);
-            alert('Error placing order. Please try again.');
+            Swal.fire({
+                icon: 'error',
+                title: 'Connection Error',
+                text: 'Unable to place order. Please check your connection and try again.',
+                confirmButtonColor: '#ff6b6b'
+            });
         }
     });
 }

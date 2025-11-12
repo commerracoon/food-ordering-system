@@ -4,15 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Food Ordering System</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="node_modules/sweetalert2/dist/sweetalert2.min.css">
+    <script src="node_modules/sweetalert2/dist/sweetalert2.all.min.js"></script>
+
+    <!-- Animate.css for animations -->
+    <link rel="stylesheet" href="node_modules/animate.css/animate.min.css">
+
+    <!-- AOS (Animate On Scroll) -->
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+
+    <!-- Custom Styles -->
     <link rel="stylesheet" href="styles.css">
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ff6b6b',
+                        secondary: '#4ecdc4',
+                        accent: '#ffe66d',
+                        dark: '#2d3436',
+                        light: '#f8f9fa',
+                    }
+                }
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="container">
         <!-- Header -->
         <header>
             <h1>🍔 Food Ordering System</h1>
-            <div class="cart-icon" onclick="toggleCart()">
-                🛒 Cart (<span id="cart-count">0</span>)
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <span id="user-info" style="display: none; color: white; font-weight: 500;"></span>
+                <button id="login-btn" onclick="window.location.href='login.html'"
+                    style="background: white; color: #ff6b6b; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; border: none; cursor: pointer;">
+                    Login
+                </button>
+                <button id="logout-btn" onclick="logout()" style="display: none; background: white; color: #ff6b6b; padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; border: none; cursor: pointer;">
+                    Logout
+                </button>
+                <div class="cart-icon" onclick="toggleCart()">
+                    🛒 Cart (<span id="cart-count">0</span>)
+                </div>
             </div>
         </header>
 
@@ -85,5 +127,15 @@
     </div>
 
     <script src="app.js"></script>
+
+    <!-- AOS (Animate On Scroll) -->
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+    </script>
 </body>
 </html>

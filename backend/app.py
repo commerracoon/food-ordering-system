@@ -1,195 +1,115 @@
-from flask import Flask, jsonify, request
+"""
+Food Ordering System - Main Application
+Modular Flask application with MySQL database
+"""
+
+from flask import Flask, jsonify, request, session
 from flask_cors import CORS
-import sqlite3
+from datetime import timedelta
 import os
-from datetime import datetime
+import sys
 
-app = Flask(__name__)
-CORS(app)
+# Import configuration
+from config import config, Config
 
-DATABASE = 'food_ordering.db'
+# Import database
+from database import Database
 
-def get_db():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
+# Import all modules
+from modules.user_module import user_bp
+from modules.admin_module import admin_bp
+from modules.order_module import order_bp
+from modules.invoice_module import invoice_bp
+from modules.feedback_module import feedback_bp
 
-def init_db():
-    if not os.path.exists(DATABASE):
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        # Create tables
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS categories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                description TEXT
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS menu_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                description TEXT,
-                price REAL NOT NULL,
-                category_id INTEGER,
-                image_url TEXT,
-                available INTEGER DEFAULT 1,
-                FOREIGN KEY (category_id) REFERENCES categories(id)
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS orders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                customer_name TEXT NOT NULL,
-                customer_phone TEXT,
-                total_amount REAL NOT NULL,
-                status TEXT DEFAULT 'pending',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS order_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                order_id INTEGER,
-                menu_item_id INTEGER,
-                quantity INTEGER NOT NULL,
-                price REAL NOT NULL,
-                FOREIGN KEY (order_id) REFERENCES orders(id),
-                FOREIGN KEY (menu_item_id) REFERENCES menu_items(id)
-            )
-        ''')
-        
-        # Insert sample data
-        cursor.execute("INSERT INTO categories (name, description) VALUES (?, ?)", 
-                      ('Burgers', 'Delicious burgers'))
-        cursor.execute("INSERT INTO categories (name, description) VALUES (?, ?)", 
-                      ('Pizza', 'Fresh pizzas'))
-        cursor.execute("INSERT INTO categories (name, description) VALUES (?, ?)", 
-                      ('Drinks', 'Refreshing beverages'))
-        cursor.execute("INSERT INTO categories (name, description) VALUES (?, ?)", 
-                      ('Desserts', 'Sweet treats'))
-        
-        # Sample menu items
-        menu_items = [
-            ('Classic Burger', 'Beef patty with lettuce, tomato, and cheese', 8.99, 1, '🍔'),
-            ('Cheese Burger', 'Double cheese with beef patty', 10.99, 1, '🍔'),
-            ('Veggie Burger', 'Plant-based patty with fresh vegetables', 9.99, 1, '🍔'),
-            ('Margherita Pizza', 'Classic tomato and mozzarella', 12.99, 2, '🍕'),
-            ('Pepperoni Pizza', 'Loaded with pepperoni', 14.99, 2, '🍕'),
-            ('Hawaiian Pizza', 'Ham and pineapple', 13.99, 2, '🍕'),
-            ('Coca Cola', 'Chilled soft drink', 2.99, 3, '🥤'),
-            ('Orange Juice', 'Fresh squeezed', 3.99, 3, '🧃'),
-            ('Water', 'Mineral water', 1.99, 3, '💧'),
-            ('Chocolate Cake', 'Rich chocolate dessert', 5.99, 4, '🍰'),
-            ('Ice Cream', 'Vanilla ice cream', 4.99, 4, '🍦'),
-        ]
-        
-        cursor.executemany(
-            "INSERT INTO menu_items (name, description, price, category_id, image_url) VALUES (?, ?, ?, ?, ?)",
-            menu_items
-        )
-        
-        conn.commit()
-        conn.close()
-        print("Database initialized successfully!")
 
-# API Routes
-@app.route('/api/categories', methods=['GET'])
-def get_categories():
-    conn = get_db()
-    categories = conn.execute('SELECT * FROM categories').fetchall()
-    conn.close()
-    return jsonify([dict(cat) for cat in categories])
+def create_app(config_name='development'):
+    """Application factory"""
+    app = Flask(__name__)
 
-@app.route('/api/menu', methods=['GET'])
-def get_menu():
-    category_id = request.args.get('category_id')
-    conn = get_db()
-    
-    if category_id:
-        items = conn.execute(
-            'SELECT * FROM menu_items WHERE category_id = ? AND available = 1',
-            (category_id,)
-        ).fetchall()
-    else:
-        items = conn.execute('SELECT * FROM menu_items WHERE available = 1').fetchall()
-    
-    conn.close()
-    return jsonify([dict(item) for item in items])
+    # Load configuration
+    app.config.from_object(config[config_name])
+    config[config_name].init_app(app)
 
-@app.route('/api/menu/<int:item_id>', methods=['GET'])
-def get_menu_item(item_id):
-    conn = get_db()
-    item = conn.execute('SELECT * FROM menu_items WHERE id = ?', (item_id,)).fetchone()
-    conn.close()
-    
-    if item:
-        return jsonify(dict(item))
-    return jsonify({'error': 'Item not found'}), 404
+    # Enable CORS
+    CORS(app, supports_credentials=True)
 
-@app.route('/api/orders', methods=['POST'])
-def create_order():
-    data = request.json
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # Create order
-    cursor.execute(
-        'INSERT INTO orders (customer_name, customer_phone, total_amount, status) VALUES (?, ?, ?, ?)',
-        (data['customer_name'], data.get('customer_phone', ''), data['total_amount'], 'pending')
-    )
-    order_id = cursor.lastrowid
-    
-    # Add order items
-    for item in data['items']:
-        cursor.execute(
-            'INSERT INTO order_items (order_id, menu_item_id, quantity, price) VALUES (?, ?, ?, ?)',
-            (order_id, item['menu_item_id'], item['quantity'], item['price'])
-        )
-    
-    conn.commit()
-    conn.close()
-    
-    return jsonify({'order_id': order_id, 'message': 'Order created successfully'}), 201
+    # Configure session
+    app.secret_key = app.config['SECRET_KEY']
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
-@app.route('/api/orders', methods=['GET'])
-def get_orders():
-    conn = get_db()
-    orders = conn.execute(
-        'SELECT * FROM orders ORDER BY created_at DESC'
-    ).fetchall()
-    conn.close()
-    return jsonify([dict(order) for order in orders])
+    # Initialize database connection pool
+    Database.initialize_pool(app.config)
 
-@app.route('/api/orders/<int:order_id>', methods=['GET'])
-def get_order(order_id):
-    conn = get_db()
-    order = conn.execute('SELECT * FROM orders WHERE id = ?', (order_id,)).fetchone()
+    # Register blueprints
+    app.register_blueprint(user_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(order_bp)
+    app.register_blueprint(invoice_bp)
+    app.register_blueprint(feedback_bp)
 
-    if not order:
-        conn.close()
-        return jsonify({'error': 'Order not found'}), 404
+    # Health check endpoint
+    @app.route('/api/health', methods=['GET'])
+    def health_check():
+        """Health check endpoint"""
+        try:
+            db_status = Database.test_connection()
+            return jsonify({
+                'status': 'healthy' if db_status else 'unhealthy',
+                'database': 'connected' if db_status else 'disconnected',
+                'message': 'Food Ordering System API is running'
+            }), 200 if db_status else 503
+        except Exception as e:
+            return jsonify({
+                'status': 'unhealthy',
+                'error': str(e)
+            }), 503
 
-    items = conn.execute('''
-        SELECT oi.*, mi.name, mi.description
-        FROM order_items oi
-        JOIN menu_items mi ON oi.menu_item_id = mi.id
-        WHERE oi.order_id = ?
-    ''', (order_id,)).fetchall()
+    # Session check endpoint
+    @app.route('/api/session', methods=['GET'])
+    def check_session():
+        """Check current session"""
+        if 'user_id' in session:
+            return jsonify({
+                'logged_in': True,
+                'user_id': session['user_id'],
+                'user_type': session.get('user_type'),
+                'username': session.get('username')
+            }), 200
+        else:
+            return jsonify({'logged_in': False}), 200
 
-    conn.close()
+    # Error handlers
+    @app.errorhandler(404)
+    def not_found(error):
+        return jsonify({'error': 'Endpoint not found'}), 404
 
-    return jsonify({
-        'order': dict(order),
-        'items': [dict(item) for item in items]
-    })
+    @app.errorhandler(500)
+    def internal_error(error):
+        return jsonify({'error': 'Internal server error'}), 500
+
+    return app
+
+
+# Create application instance
+app = create_app(os.getenv('FLASK_ENV', 'development'))
+
+
 
 if __name__ == '__main__':
-    init_db()
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    print("\n" + "="*60)
+    print("🍔 Food Ordering System - Starting Server")
+    print("="*60)
+    print("\n📊 Database: MySQL (XAMPP)")
+    print("🌐 Server: http://127.0.0.1:5000")
+    print("📝 API Docs: http://127.0.0.1:5000/api/health")
+    print("\n💡 Make sure:")
+    print("   1. XAMPP MySQL is running")
+    print("   2. Database is set up (run: python database/setup_database.py)")
+    print("   3. Frontend is configured to use this API")
+    print("\n" + "="*60 + "\n")
+
+    app.run(host='127.0.0.1', port=5000, debug=True)
 

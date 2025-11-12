@@ -16,7 +16,8 @@ function createWindow() {
     icon: path.join(__dirname, 'assets/icon.png')
   });
 
-  mainWindow.loadFile('index.html');
+  // Load login page first
+  mainWindow.loadFile('login.html');
 
   // Open DevTools in development mode
   if (process.argv.includes('--dev')) {
