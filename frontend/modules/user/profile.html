@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Food Ordering System</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Common JS Files -->
+    <script src="../../common/js/config.js"></script>
+    <script src="../../common/js/api.js"></script>
+    <script src="../../common/js/auth.js"></script>
+    <script src="../../common/js/utils.js"></script>
+    
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ff6b6b',
+                        secondary: '#4ecdc4',
+                        accent: '#ffe66d',
+                        dark: '#2d3436',
+                        light: '#f8f9fa',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-primary to-secondary text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold">🍔 My Profile</h1>
+            <div class="flex items-center gap-4">
+                <button onclick="window.location.href='dashboard.html'" class="bg-white text-primary px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all">
+                    ← Back to Dashboard
+                </button>
+                <button onclick="logout()" class="bg-white text-primary px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all">
+                    Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Profile Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <span>👤</span> Profile Information
+            </h2>
+            
+            <form id="profile-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">Username</label>
+                        <input type="text" id="username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" readonly>
+                        <p class="text-sm text-gray-500 mt-1">Username cannot be changed</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">Email</label>
+                        <input type="email" id="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">Full Name</label>
+                        <input type="text" id="full-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">Phone</label>
+                        <input type="tel" id="phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">Address</label>
+                    <textarea id="address" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all">
+                        💾 Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Change Password Section -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                <span>🔒</span> Change Password
+            </h2>
+            
+            <form id="password-form" class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">Current Password</label>
+                    <input type="password" id="current-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" required>
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">New Password</label>
+                    <input type="password" id="new-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" required minlength="6">
+                    <p class="text-sm text-gray-500 mt-1">Minimum 6 characters</p>
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">Confirm New Password</label>
+                    <input type="password" id="confirm-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" required minlength="6">
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="bg-secondary text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all">
+                        🔑 Update Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Check authentication on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check if user is logged in
+            if (!isLoggedIn()) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            // Get current user
+            currentUser = getCurrentUser();
+            
+            // Load profile data
+            await loadProfile();
+        });
+
+        // Load user profile
+        async function loadProfile() {
+            try {
+                showLoading('Loading profile...');
+
+                const response = await apiGet(API_ENDPOINTS.USER_PROFILE);
+
+                hideLoading();
+
+                // The response has a 'user' object
+                const user = response.user || response;
+
+                // Populate form fields
+                document.getElementById('username').value = user.username || currentUser.userName;
+                document.getElementById('email').value = user.email || '';
+                document.getElementById('full-name').value = user.full_name || '';
+                document.getElementById('phone').value = user.phone || '';
+                document.getElementById('address').value = user.address || '';
+
+            } catch (error) {
+                hideLoading();
+                console.error('Error loading profile:', error);
+                // If API fails, just show username from localStorage
+                document.getElementById('username').value = currentUser.userName;
+            }
+        }
+
+        // Handle profile form submission
+        document.getElementById('profile-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            try {
+                showLoading('Updating profile...');
+
+                const profileData = {
+                    full_name: document.getElementById('full-name').value,
+                    phone: document.getElementById('phone').value,
+                    address: document.getElementById('address').value
+                };
+
+                // Use PUT method for updating profile
+                await apiPut(API_ENDPOINTS.USER_PROFILE, profileData);
+
+                hideLoading();
+
+                await showSuccess('Success!', 'Profile updated successfully');
+
+            } catch (error) {
+                hideLoading();
+                handleApiError(error, 'Failed to update profile');
+            }
+        });
+
+        // Handle password form submission
+        document.getElementById('password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            // Validate passwords match
+            if (newPassword !== confirmPassword) {
+                await showError('Error', 'New passwords do not match');
+                return;
+            }
+
+            // Validate password length
+            if (newPassword.length < 6) {
+                await showError('Error', 'Password must be at least 6 characters');
+                return;
+            }
+
+            try {
+                showLoading('Updating password...');
+
+                const passwordData = {
+                    current_password: currentPassword,
+                    new_password: newPassword
+                };
+
+                await apiPost(`${API_ENDPOINTS.USER_PROFILE}/change-password`, passwordData);
+
+                hideLoading();
+
+                // Clear form
+                document.getElementById('password-form').reset();
+
+                await showSuccess('Success!', 'Password updated successfully');
+
+            } catch (error) {
+                hideLoading();
+                handleApiError(error, 'Failed to update password');
+            }
+        });
+
+        // Logout function
+        async function logout() {
+            try {
+                showLoading('Logging out...');
+                await apiPost(API_ENDPOINTS.USER_LOGOUT, {});
+                clearUserSession();
+                hideLoading();
+                await showSuccess('Logged Out', 'You have been logged out successfully.');
+                window.location.href = '../auth/login.html';
+            } catch (error) {
+                hideLoading();
+                clearUserSession();
+                window.location.href = '../auth/login.html';
+            }
+        }
+    </script>
+</body>
+</html>
+

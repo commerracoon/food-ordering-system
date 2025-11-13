@@ -28,10 +28,17 @@ The API uses session-based authentication. After login, a session cookie is set 
 
 ### Login
 - **POST** `/api/user/login`
-- **Body:**
+- **Body:** (supports login by username OR email)
 ```json
 {
   "email": "john@example.com",
+  "password": "password123"
+}
+```
+OR
+```json
+{
+  "username": "john_doe",
   "password": "password123"
 }
 ```
@@ -77,10 +84,17 @@ The API uses session-based authentication. After login, a session cookie is set 
 
 ### Admin Login
 - **POST** `/api/admin/login`
-- **Body:**
+- **Body:** (supports login by username OR email)
 ```json
 {
   "email": "admin@example.com",
+  "password": "admin123"
+}
+```
+OR
+```json
+{
+  "username": "admin",
   "password": "admin123"
 }
 ```

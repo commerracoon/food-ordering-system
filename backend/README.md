@@ -154,10 +154,16 @@ curl -X POST http://127.0.0.1:5000/api/user/register \
   -H "Content-Type: application/json" \
   -d '{"username":"test","email":"test@test.com","password":"test123","full_name":"Test User"}'
 
-# Login
+# Login (by email)
 curl -X POST http://127.0.0.1:5000/api/user/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@test.com","password":"test123"}' \
+  -c cookies.txt
+
+# Login (by username)
+curl -X POST http://127.0.0.1:5000/api/user/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"test","password":"test123"}' \
   -c cookies.txt
 
 # Get menu (with session)

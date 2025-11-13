@@ -9,8 +9,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- SweetAlert2 -->
-    <link rel="stylesheet" href="node_modules/sweetalert2/dist/sweetalert2.min.css">
-    <script src="node_modules/sweetalert2/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Common JS Files -->
+    <script src="../../common/js/config.js"></script>
+    <script src="../../common/js/api.js"></script>
+    <script src="../../common/js/auth.js"></script>
+    <script src="../../common/js/utils.js"></script>
     
     <!-- Tailwind Config -->
     <script>
@@ -116,8 +124,41 @@
             </div>
             
             <div id="menu-content" class="hidden">
-                <h2 class="text-2xl font-bold mb-4">Menu Management</h2>
-                <p class="text-gray-500">Menu management coming soon...</p>
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Menu Management</h2>
+                    <button onclick="goToMenuManagement()" class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                        <i class="fas fa-cog mr-2"></i>Manage Categories & Menu Items
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border-2 border-blue-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-bold text-blue-800">Categories</h3>
+                            <i class="fas fa-list text-4xl text-blue-600"></i>
+                        </div>
+                        <p class="text-gray-700 mb-4">Organize your menu into categories like Pizza, Burgers, Drinks, etc.</p>
+                        <ul class="text-sm text-gray-600 space-y-2">
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Create and edit categories</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Set display order</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Add category images</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Activate/deactivate categories</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 border-2 border-purple-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-bold text-purple-800">Menu Items</h3>
+                            <i class="fas fa-utensils text-4xl text-purple-600"></i>
+                        </div>
+                        <p class="text-gray-700 mb-4">Add and manage your food items with prices, descriptions, and images.</p>
+                        <ul class="text-sm text-gray-600 space-y-2">
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Add menu items with details</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Set prices and prep time</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Mark items as featured</li>
+                            <li><i class="fas fa-check text-green-600 mr-2"></i>Control availability</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             
             <div id="users-content" class="hidden">
@@ -138,14 +179,14 @@
         
         // Check if admin is logged in
         document.addEventListener('DOMContentLoaded', () => {
-            const userName = localStorage.getItem('userName');
-            const userType = localStorage.getItem('userType');
-            
+            const userName = localStorage.getItem(STORAGE_KEYS.USER_NAME);
+            const userType = localStorage.getItem(STORAGE_KEYS.USER_TYPE);
+
             if (!userName || userType !== 'admin') {
-                window.location.href = 'login.html';
+                window.location.href = '../auth/login.html';
                 return;
             }
-            
+
             document.getElementById('admin-name').textContent = `Welcome, ${userName}!`;
             loadDashboardData();
         });
@@ -163,12 +204,12 @@
         // Switch tabs
         function switchTab(tab) {
             currentTab = tab;
-            
+
             // Update tab buttons
             ['orders', 'menu', 'users', 'feedback'].forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
                 const content = document.getElementById(`${t}-content`);
-                
+
                 if (t === tab) {
                     btn.className = 'px-6 py-4 font-semibold border-b-2 border-primary text-primary';
                     content.classList.remove('hidden');
@@ -178,30 +219,35 @@
                 }
             });
         }
+
+        // Navigate to menu management
+        function goToMenuManagement() {
+            window.location.href = 'menu-management.html';
+        }
         
         // Logout
         async function logout() {
             try {
-                await fetch(`${API_URL}/admin/logout`, {
-                    method: 'POST',
-                    credentials: 'include'
-                });
+                showLoading('Logging out...');
+
+                await apiPost(API_ENDPOINTS.ADMIN_LOGOUT, {});
+
+                // Clear session
+                clearUserSession();
+
+                hideLoading();
+
+                await showSuccess('Logged Out', 'You have been logged out successfully.');
+
+                // Redirect to login page
+                window.location.href = '../auth/login.html';
+
             } catch (error) {
-                console.error('Logout error:', error);
+                hideLoading();
+                // Even if API call fails, clear local session and redirect
+                clearUserSession();
+                window.location.href = '../auth/login.html';
             }
-            
-            localStorage.removeItem('userName');
-            localStorage.removeItem('userType');
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'Logged Out',
-                text: 'You have been logged out successfully.',
-                timer: 2000,
-                showConfirmButton: false
-            });
-            
-            window.location.href = 'login.html';
         }
     </script>
 </body>

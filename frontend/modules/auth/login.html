@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Food Ordering System</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Common CSS -->
+    <link rel="stylesheet" href="../../common/css/common.css">
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ff6b6b',
+                        secondary: '#4ecdc4',
+                        accent: '#ffe66d',
+                        dark: '#2d3436',
+                        light: '#f8f9fa',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Common JS Files -->
+    <script defer src="../../common/js/config.js"></script>
+    <script defer src="../../common/js/api.js"></script>
+    <script defer src="../../common/js/auth.js"></script>
+    <script defer src="../../common/js/utils.js"></script>
+    <script defer src="../../common/js/navbar.js"></script>
+</head>
+<body>
+    <!-- Common Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="#" id="navbar-brand-link" class="navbar-brand">
+                <i class="fas fa-utensils"></i>
+                Food Ordering System
+            </a>
+
+            <ul class="navbar-menu" id="navbar-menu">
+                <!-- Guest Menu -->
+                <li id="nav-guest" style="display: none;">
+                    <a href="#" id="nav-home-link" class="navbar-link">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </li>
+
+                <!-- User Menu -->
+                <li id="nav-user-dashboard" style="display: none;">
+                    <a href="#" id="nav-user-dashboard-link" class="navbar-link">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li id="nav-user-order" style="display: none;">
+                    <a href="#" id="nav-user-order-link" class="navbar-link">
+                        <i class="fas fa-shopping-cart"></i> Order Food
+                    </a>
+                </li>
+                <li id="nav-user-profile" style="display: none;">
+                    <a href="#" id="nav-user-profile-link" class="navbar-link">
+                        <i class="fas fa-user"></i> My Profile
+                    </a>
+                </li>
+
+                <!-- Admin Menu -->
+                <li id="nav-admin-dashboard" style="display: none;">
+                    <a href="#" id="nav-admin-dashboard-link" class="navbar-link">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li id="nav-admin-menu" style="display: none;">
+                    <a href="#" id="nav-admin-menu-link" class="navbar-link">
+                        <i class="fas fa-utensils"></i> Menu Management
+                    </a>
+                </li>
+
+                <!-- User Info & Actions -->
+                <li>
+                    <div class="navbar-user-info" id="navbar-user-info" style="display: none;">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="navbar-username"></span>
+                    </div>
+                </li>
+                <li id="nav-login" style="display: none;">
+                    <button class="navbar-button" onclick="navLogin()">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                </li>
+                <li id="nav-logout" style="display: none;">
+                    <button class="navbar-button" onclick="navLogout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="min-h-screen flex items-center justify-center py-8">
+    <div class="container mx-auto px-4">
+        <div class="max-w-md mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-primary to-secondary p-8 text-white text-center">
+                <h1 class="text-4xl font-bold mb-2">🍔 Food Ordering</h1>
+                <p class="text-white/90">Welcome back! Please login to continue</p>
+            </div>
+            
+            <!-- Login Form -->
+            <div class="p-8">
+                <div class="mb-6 flex gap-2">
+                    <button id="user-tab" class="flex-1 py-3 px-4 rounded-lg font-semibold transition-all bg-primary text-white" onclick="switchTab('user')">
+                        User Login
+                    </button>
+                    <button id="admin-tab" class="flex-1 py-3 px-4 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300" onclick="switchTab('admin')">
+                        Admin Login
+                    </button>
+                </div>
+                
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">Username or Email</label>
+                        <input type="text" id="email" required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="Enter your username or email">
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">Password</label>
+                        <input type="password" id="password" required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="Enter your password">
+                    </div>
+
+                    <button type="submit"
+                        class="w-full bg-gradient-to-r from-primary to-secondary text-white font-bold py-3 px-4 rounded-lg hover:shadow-lg transform hover:scale-105 transition-all">
+                        Login
+                    </button>
+                </form>
+                <div class="mt-4 text-center space-y-2">
+                    <p class="text-gray-600">
+                        Don't have an account?
+                        <a href="register.html" class="text-primary font-semibold hover:underline">Register here</a>
+                    </p>
+                    <a href="../order/menu.html" class="block text-secondary font-semibold hover:underline">
+                        Continue as Guest (Browse Menu)
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Demo Credentials -->
+        <div class="max-w-md mx-auto mt-6 bg-white/90 backdrop-blur rounded-lg p-4 text-sm">
+            <p class="font-semibold text-gray-700 mb-2">🔐 Demo Credentials:</p>
+            <p class="text-gray-600"><strong>Admin:</strong> admin@foodorder.com (or username: admin) / admin123</p>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        let currentTab = 'user';
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const userTab = document.getElementById('user-tab');
+            const adminTab = document.getElementById('admin-tab');
+
+            if (tab === 'user') {
+                userTab.className = 'flex-1 py-3 px-4 rounded-lg font-semibold transition-all bg-primary text-white';
+                adminTab.className = 'flex-1 py-3 px-4 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
+            } else {
+                adminTab.className = 'flex-1 py-3 px-4 rounded-lg font-semibold transition-all bg-primary text-white';
+                userTab.className = 'flex-1 py-3 px-4 rounded-lg font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300';
+            }
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const endpoint = currentTab === 'user' ? API_ENDPOINTS.USER_LOGIN : API_ENDPOINTS.ADMIN_LOGIN;
+
+            try {
+                showLoading('Logging in...');
+
+                const data = await apiPost(endpoint, { email, password });
+
+                hideLoading();
+
+                // Store user info using auth utility
+                const userData = data.user || data.admin;
+                const token = data.token;  // Get JWT token from response
+
+                if (!userData) {
+                    throw new Error('No user data received from server');
+                }
+
+                userData.user_type = currentTab;
+                saveUserSession(userData, token);  // Save user data and token
+
+                await showSuccess(`Welcome back, ${userData.username}!`);
+
+                // Check if there's a saved cart (guest was trying to checkout)
+                const savedCart = localStorage.getItem('guest_cart');
+
+                // Redirect based on user type and cart status
+                if (currentTab === 'user' && savedCart && JSON.parse(savedCart).length > 0) {
+                    // User has items in cart - redirect to ordering page to complete checkout
+                    window.location.href = '../order/menu.html';
+                } else {
+                    // No cart or admin login - redirect to dashboard
+                    redirectToDashboard();
+                }
+
+            } catch (error) {
+                hideLoading();
+                handleApiError(error, 'Login failed. Please check your credentials.');
+            }
+        });
+    </script>
+</body>
+</html>
+

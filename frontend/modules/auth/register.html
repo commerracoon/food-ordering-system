@@ -4,14 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - Food Ordering System</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- SweetAlert2 -->
-    <link rel="stylesheet" href="node_modules/sweetalert2/dist/sweetalert2.min.css">
-    <script src="node_modules/sweetalert2/dist/sweetalert2.all.min.js"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Common CSS -->
+    <link rel="stylesheet" href="../../common/css/common.css">
+
     <!-- Tailwind Config -->
     <script>
         tailwind.config = {
@@ -28,8 +33,88 @@
             }
         }
     </script>
+
+    <!-- Common JS Files -->
+    <script defer src="../../common/js/config.js"></script>
+    <script defer src="../../common/js/api.js"></script>
+    <script defer src="../../common/js/auth.js"></script>
+    <script defer src="../../common/js/utils.js"></script>
+    <script defer src="../../common/js/navbar.js"></script>
 </head>
-<body class="bg-gradient-to-br from-primary to-secondary min-h-screen flex items-center justify-center">
+<body>
+    <!-- Common Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="#" id="navbar-brand-link" class="navbar-brand">
+                <i class="fas fa-utensils"></i>
+                Food Ordering System
+            </a>
+
+            <ul class="navbar-menu" id="navbar-menu">
+                <!-- Guest Menu -->
+                <li id="nav-guest" style="display: none;">
+                    <a href="#" id="nav-home-link" class="navbar-link">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </li>
+
+                <!-- User Menu -->
+                <li id="nav-user-dashboard" style="display: none;">
+                    <a href="#" id="nav-user-dashboard-link" class="navbar-link">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li id="nav-user-order" style="display: none;">
+                    <a href="#" id="nav-user-order-link" class="navbar-link">
+                        <i class="fas fa-shopping-cart"></i> Order Food
+                    </a>
+                </li>
+                <li id="nav-user-profile" style="display: none;">
+                    <a href="#" id="nav-user-profile-link" class="navbar-link">
+                        <i class="fas fa-user"></i> My Profile
+                    </a>
+                </li>
+
+                <!-- Admin Menu -->
+                <li id="nav-admin-dashboard" style="display: none;">
+                    <a href="#" id="nav-admin-dashboard-link" class="navbar-link">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li id="nav-admin-menu" style="display: none;">
+                    <a href="#" id="nav-admin-menu-link" class="navbar-link">
+                        <i class="fas fa-utensils"></i> Menu Management
+                    </a>
+                </li>
+
+                <!-- User Info & Actions -->
+                <li>
+                    <div class="navbar-user-info" id="navbar-user-info" style="display: none;">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="navbar-username"></span>
+                    </div>
+                </li>
+                <li id="nav-login" style="display: none;">
+                    <button class="navbar-button" onclick="navLogin()">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                </li>
+                <li id="nav-logout" style="display: none;">
+                    <button class="navbar-button" onclick="navLogout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="min-h-screen flex items-center justify-center py-8">
     <div class="container mx-auto px-4 py-8">
         <div class="max-w-md mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
             <!-- Header -->
@@ -100,66 +185,52 @@
     </div>
 
     <script>
-        const API_URL = 'http://127.0.0.1:5000/api';
-        
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const username = document.getElementById('username').value;
             const full_name = document.getElementById('full_name').value;
             const email = document.getElementById('email').value;
             const phone = document.getElementById('phone').value;
             const password = document.getElementById('password').value;
             const confirm_password = document.getElementById('confirm_password').value;
-            
+
             // Validate passwords match
             if (password !== confirm_password) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Password Mismatch',
-                    text: 'Passwords do not match. Please try again.'
-                });
+                await showError('Password Mismatch', 'Passwords do not match. Please try again.');
                 return;
             }
-            
+
+            // Validate password strength
+            if (password.length < 6) {
+                await showError('Weak Password', 'Password must be at least 6 characters long.');
+                return;
+            }
+
             try {
-                const response = await fetch(`${API_URL}/user/register`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ username, full_name, email, phone, password })
+                showLoading('Creating your account...');
+
+                const data = await apiPost(API_ENDPOINTS.USER_REGISTER, {
+                    username,
+                    full_name,
+                    email,
+                    phone,
+                    password
                 });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    await Swal.fire({
-                        icon: 'success',
-                        title: 'Registration Successful!',
-                        text: 'Your account has been created. Please login to continue.',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                    
-                    window.location.href = 'login.html';
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Registration Failed',
-                        text: data.error || 'Could not create account. Please try again.'
-                    });
-                }
+
+                hideLoading();
+
+                await showSuccess('Registration Successful!', 'Your account has been created. Please login to continue.');
+
+                // Redirect to login page
+                window.location.href = 'login.html';
+
             } catch (error) {
-                console.error('Registration error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Connection Error',
-                    text: 'Could not connect to server. Please make sure the backend is running.'
-                });
+                hideLoading();
+                handleApiError(error, 'Registration failed. Please try again.');
             }
         });
     </script>
+    </div>
 </body>
 </html>
-

@@ -1,14 +1,17 @@
 """
-Admin Module - Handle admin registration, login, logout, and profile management
+Admin Module Routes - Handle admin registration, login, logout, and profile management
 """
 
 from flask import Blueprint, request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from database import Database, dict_to_sql_insert, dict_to_sql_update
+
+# Add parent directories to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+from common import Database, dict_to_sql_insert, dict_to_sql_update
+from common.middleware import login_required, admin_required, super_admin_required, create_token
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -18,13 +21,10 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 # ============================================
 
 @admin_bp.route('/register', methods=['POST'])
+@super_admin_required
 def register():
     """Register a new admin (requires super_admin permission)"""
     try:
-        # Check if requester is super admin
-        if session.get('user_type') != 'admin' or session.get('admin_role') != 'super_admin':
-            return jsonify({'error': 'Unauthorized. Super admin access required'}), 403
-        
         data = request.json
         
         # Validate required fields
@@ -43,8 +43,8 @@ def register():
         if existing_admin:
             return jsonify({'error': 'Admin with this email or username already exists'}), 409
         
-        # Hash password
-        hashed_password = generate_password_hash(data['password'])
+        # Hash password using pbkdf2:sha256 for compatibility
+        hashed_password = generate_password_hash(data['password'], method='pbkdf2:sha256')
         
         # Prepare admin data
         admin_data = {
@@ -110,19 +110,28 @@ def login():
             (admin['id'],)
         )
 
-        # Create session
+        # Create session (for backward compatibility)
         session['user_id'] = admin['id']
         session['user_type'] = 'admin'
         session['admin_role'] = admin['role']
         session['username'] = admin['username']
         session.permanent = True
 
+        # Create JWT token
+        token = create_token(
+            user_id=admin['id'],
+            user_type='admin',
+            username=admin['username'],
+            admin_role=admin['role']
+        )
+
         # Remove password from response
         admin_data = {k: v for k, v in admin.items() if k != 'password'}
 
         return jsonify({
             'message': 'Login successful',
-            'admin': admin_data
+            'admin': admin_data,
+            'token': token  # Return JWT token
         }), 200
 
     except Exception as e:
@@ -148,57 +157,53 @@ def logout():
 # ============================================
 
 @admin_bp.route('/profile', methods=['GET'])
+@admin_required
 def get_profile():
     """Get admin profile"""
     try:
-        # Check if admin is logged in
-        if 'user_id' not in session or session.get('user_type') != 'admin':
-            return jsonify({'error': 'Unauthorized'}), 401
-        
-        admin_id = session['user_id']
-        
+        # Get admin_id from JWT token or session
+        admin_id = getattr(request, 'user_id', None) or session.get('user_id')
+
         # Get admin data
         admin = Database.execute_query(
             """SELECT id, username, email, full_name, phone, role,
-                      profile_image, created_at, updated_at, last_login 
+                      profile_image, created_at, updated_at, last_login
                FROM admins WHERE id = %s""",
             (admin_id,),
             fetch_one=True
         )
-        
+
         if not admin:
             return jsonify({'error': 'Admin not found'}), 404
-        
+
         return jsonify({'admin': admin}), 200
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
 @admin_bp.route('/profile', methods=['PUT'])
+@admin_required
 def update_profile():
     """Update admin profile"""
     try:
-        # Check if admin is logged in
-        if 'user_id' not in session or session.get('user_type') != 'admin':
-            return jsonify({'error': 'Unauthorized'}), 401
-        
-        admin_id = session['user_id']
+        # Get admin_id from JWT token or session
+        admin_id = getattr(request, 'user_id', None) or session.get('user_id')
         data = request.json
-        
+
         # Prepare update data (only allowed fields)
         allowed_fields = ['full_name', 'phone', 'profile_image']
         update_data = {k: v for k, v in data.items() if k in allowed_fields}
-        
+
         if not update_data:
             return jsonify({'error': 'No valid fields to update'}), 400
-        
+
         # Update admin
         query, values = dict_to_sql_update('admins', update_data, 'id = %s', (admin_id,))
         Database.execute_query(query, values)
-        
+
         return jsonify({'message': 'Profile updated successfully'}), 200
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

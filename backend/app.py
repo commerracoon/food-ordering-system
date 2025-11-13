@@ -9,18 +9,16 @@ from datetime import timedelta
 import os
 import sys
 
-# Import configuration
-from config import config, Config
-
-# Import database
-from database import Database
+# Import common utilities
+from common import Database, Config, config
 
 # Import all modules
-from modules.user_module import user_bp
-from modules.admin_module import admin_bp
-from modules.order_module import order_bp
-from modules.invoice_module import invoice_bp
-from modules.feedback_module import feedback_bp
+from modules.user import user_bp
+from modules.admin import admin_bp
+from modules.admin.menu_routes import menu_admin_bp
+from modules.order import order_bp
+from modules.invoice import invoice_bp
+from modules.feedback import feedback_bp
 
 
 def create_app(config_name='development'):
@@ -31,13 +29,24 @@ def create_app(config_name='development'):
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
 
-    # Enable CORS
-    CORS(app, supports_credentials=True)
+    # Enable CORS - Support for Electron (file://) and web servers
+    # Note: Using regex pattern to match file:// protocol and common dev servers
+    CORS(app,
+         supports_credentials=True,
+         origins=[
+             r"file://.*",  # Electron app
+             r"http://localhost:.*",  # Local dev servers
+             r"http://127\.0\.0\.1:.*",  # Local dev servers
+         ],
+         allow_headers=['Content-Type', 'Authorization'],
+         expose_headers=['Set-Cookie'],
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
     # Configure session
     app.secret_key = app.config['SECRET_KEY']
-    app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_HTTPONLY'] = False  # Must be False for Electron to access cookies
+    app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # None for cross-origin (Electron)
+    app.config['SESSION_COOKIE_SECURE'] = False  # False for development (no HTTPS)
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
     # Initialize database connection pool
@@ -46,6 +55,7 @@ def create_app(config_name='development'):
     # Register blueprints
     app.register_blueprint(user_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(menu_admin_bp)
     app.register_blueprint(order_bp)
     app.register_blueprint(invoice_bp)
     app.register_blueprint(feedback_bp)
@@ -100,12 +110,12 @@ app = create_app(os.getenv('FLASK_ENV', 'development'))
 
 if __name__ == '__main__':
     print("\n" + "="*60)
-    print("🍔 Food Ordering System - Starting Server")
+    print("Food Ordering System - Starting Server")
     print("="*60)
-    print("\n📊 Database: MySQL (XAMPP)")
-    print("🌐 Server: http://127.0.0.1:5000")
-    print("📝 API Docs: http://127.0.0.1:5000/api/health")
-    print("\n💡 Make sure:")
+    print("\nDatabase: MySQL (XAMPP)")
+    print("Server: http://127.0.0.1:5000")
+    print("API Docs: http://127.0.0.1:5000/api/health")
+    print("\nMake sure:")
     print("   1. XAMPP MySQL is running")
     print("   2. Database is set up (run: python database/setup_database.py)")
     print("   3. Frontend is configured to use this API")

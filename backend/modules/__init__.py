@@ -2,11 +2,11 @@
 Modules package for Food Ordering System
 """
 
-from .user_module import user_bp
-from .admin_module import admin_bp
-from .order_module import order_bp
-from .invoice_module import invoice_bp
-from .feedback_module import feedback_bp
+from .user import user_bp
+from .admin import admin_bp
+from .order import order_bp
+from .invoice import invoice_bp
+from .feedback import feedback_bp
 
 __all__ = [
     'user_bp',

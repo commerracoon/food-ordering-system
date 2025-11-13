@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Ordering System</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Common CSS -->
+    <link rel="stylesheet" href="../../common/css/common.css">
+    
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ff6b6b',
+                        secondary: '#4ecdc4',
+                        accent: '#ffe66d',
+                        dark: '#2d3436',
+                        light: '#f8f9fa',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Common JS Files -->
+    <script defer src="../../common/js/config.js"></script>
+    <script defer src="../../common/js/api.js"></script>
+    <script defer src="../../common/js/auth.js"></script>
+    <script defer src="../../common/js/utils.js"></script>
+    <script defer src="../../common/js/navbar.js"></script>
+</head>
+<body>
+    <!-- Common Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="#" id="navbar-brand-link" class="navbar-brand">
+                <i class="fas fa-utensils"></i>
+                Food Ordering System
+            </a>
+            
+            <ul class="navbar-menu" id="navbar-menu">
+                <!-- Guest Menu -->
+                <li id="nav-guest" style="display: none;">
+                    <a href="#" id="nav-home-link" class="navbar-link">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </li>
+                
+                <!-- User Menu -->
+                <li id="nav-user-dashboard" style="display: none;">
+                    <a href="#" id="nav-user-dashboard-link" class="navbar-link">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li id="nav-user-order" style="display: none;">
+                    <a href="#" id="nav-user-order-link" class="navbar-link">
+                        <i class="fas fa-shopping-cart"></i> Order Food
+                    </a>
+                </li>
+                <li id="nav-user-profile" style="display: none;">
+                    <a href="#" id="nav-user-profile-link" class="navbar-link">
+                        <i class="fas fa-user"></i> My Profile
+                    </a>
+                </li>
+                
+                <!-- Admin Menu -->
+                <li id="nav-admin-dashboard" style="display: none;">
+                    <a href="#" id="nav-admin-dashboard-link" class="navbar-link">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li id="nav-admin-menu" style="display: none;">
+                    <a href="#" id="nav-admin-menu-link" class="navbar-link">
+                        <i class="fas fa-utensils"></i> Menu Management
+                    </a>
+                </li>
+                
+                <!-- User Info & Actions -->
+                <li>
+                    <div class="navbar-user-info" id="navbar-user-info" style="display: none;">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="navbar-username"></span>
+                    </div>
+                </li>
+                <li id="nav-login" style="display: none;">
+                    <button class="navbar-button" onclick="navLogin()">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                </li>
+                <li id="nav-logout" style="display: none;">
+                    <button class="navbar-button" onclick="navLogout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <!-- Main Content -->
+    <div id="main-content">
+        <!-- Page-specific content goes here -->
+    </div>
+    
+    <!-- Page-specific scripts go here -->
+</body>
+</html>
+

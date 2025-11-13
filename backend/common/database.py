@@ -5,7 +5,7 @@ Database connection and utilities for MySQL
 import mysql.connector
 from mysql.connector import Error, pooling
 from contextlib import contextmanager
-from config import Config
+from .config import Config
 
 class Database:
     """Database connection manager"""
@@ -65,7 +65,7 @@ class Database:
         try:
             return cls._connection_pool.get_connection()
         except Error as e:
-            print(f"[ERROR] Error getting connection from pool: {e}")
+            print(f"✗ Error getting connection from pool: {e}")
             raise
     
     @classmethod
@@ -86,7 +86,7 @@ class Database:
             connection.commit()
         except Error as e:
             connection.rollback()
-            print(f"[ERROR] Database error: {e}")
+            print(f"✗ Database error: {e}")
             raise
         finally:
             cursor.close()
@@ -140,48 +140,9 @@ class Database:
                 cursor.execute("SELECT 1")
                 result = cursor.fetchone()
                 if result:
-                    print("[OK] Database connection test successful")
+                    print("✓ Database connection test successful")
                     return True
         except Error as e:
-            print(f"[ERROR] Database connection test failed: {e}")
+            print(f"✗ Database connection test failed: {e}")
             return False
-
-
-# Helper functions for common operations
-
-def dict_to_sql_insert(table, data):
-    """
-    Convert dictionary to SQL INSERT statement
-    
-    Args:
-        table: Table name
-        data: Dictionary of column:value pairs
-        
-    Returns:
-        Tuple of (query, values)
-    """
-    columns = ', '.join(data.keys())
-    placeholders = ', '.join(['%s'] * len(data))
-    query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
-    values = tuple(data.values())
-    return query, values
-
-
-def dict_to_sql_update(table, data, where_clause, where_params):
-    """
-    Convert dictionary to SQL UPDATE statement
-    
-    Args:
-        table: Table name
-        data: Dictionary of column:value pairs to update
-        where_clause: WHERE clause (e.g., "id = %s")
-        where_params: Parameters for WHERE clause
-        
-    Returns:
-        Tuple of (query, values)
-    """
-    set_clause = ', '.join([f"{k} = %s" for k in data.keys()])
-    query = f"UPDATE {table} SET {set_clause} WHERE {where_clause}"
-    values = tuple(data.values()) + tuple(where_params)
-    return query, values
 

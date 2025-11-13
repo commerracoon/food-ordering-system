@@ -1,14 +1,17 @@
 """
-User Module - Handle user registration, login, logout, and profile management
+User Module Routes - Handle user registration, login, logout, and profile management
 """
 
 from flask import Blueprint, request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from database import Database, dict_to_sql_insert, dict_to_sql_update
+
+# Add parent directories to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+from common import Database, dict_to_sql_insert, dict_to_sql_update
+from common.middleware import login_required, create_token
 
 user_bp = Blueprint('user', __name__, url_prefix='/api/user')
 
@@ -39,8 +42,8 @@ def register():
         if existing_user:
             return jsonify({'error': 'User with this email or username already exists'}), 409
         
-        # Hash password
-        hashed_password = generate_password_hash(data['password'])
+        # Hash password using pbkdf2:sha256 for compatibility
+        hashed_password = generate_password_hash(data['password'], method='pbkdf2:sha256')
         
         # Prepare user data
         user_data = {
@@ -100,18 +103,26 @@ def login():
         if not check_password_hash(user['password'], data['password']):
             return jsonify({'error': 'Invalid username/email or password'}), 401
 
-        # Create session
+        # Create session (for backward compatibility)
         session['user_id'] = user['id']
         session['user_type'] = 'user'
         session['username'] = user['username']
         session.permanent = True
+
+        # Create JWT token
+        token = create_token(
+            user_id=user['id'],
+            user_type='user',
+            username=user['username']
+        )
 
         # Remove password from response
         user_data = {k: v for k, v in user.items() if k != 'password'}
 
         return jsonify({
             'message': 'Login successful',
-            'user': user_data
+            'user': user_data,
+            'token': token  # Return JWT token
         }), 200
 
     except Exception as e:
@@ -137,57 +148,115 @@ def logout():
 # ============================================
 
 @user_bp.route('/profile', methods=['GET'])
+@login_required
 def get_profile():
     """Get user profile"""
     try:
+        # Get user_id from JWT token or session
+        user_id = getattr(request, 'user_id', None) or session.get('user_id')
+        user_type = getattr(request, 'user_type', None) or session.get('user_type')
+
         # Check if user is logged in
-        if 'user_id' not in session or session.get('user_type') != 'user':
+        if not user_id or user_type != 'user':
             return jsonify({'error': 'Unauthorized'}), 401
-        
-        user_id = session['user_id']
-        
+
         # Get user data
         user = Database.execute_query(
-            """SELECT id, username, email, full_name, phone, address, 
-                      profile_image, created_at, updated_at 
+            """SELECT id, username, email, full_name, phone, address,
+                      profile_image, created_at, updated_at
                FROM users WHERE id = %s""",
             (user_id,),
             fetch_one=True
         )
-        
+
         if not user:
             return jsonify({'error': 'User not found'}), 404
-        
+
         return jsonify({'user': user}), 200
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
 @user_bp.route('/profile', methods=['PUT'])
+@login_required
 def update_profile():
     """Update user profile"""
     try:
+        # Get user_id from JWT token or session
+        user_id = getattr(request, 'user_id', None) or session.get('user_id')
+        user_type = getattr(request, 'user_type', None) or session.get('user_type')
+
         # Check if user is logged in
-        if 'user_id' not in session or session.get('user_type') != 'user':
+        if not user_id or user_type != 'user':
             return jsonify({'error': 'Unauthorized'}), 401
-        
-        user_id = session['user_id']
+
         data = request.json
-        
+
         # Prepare update data (only allowed fields)
         allowed_fields = ['full_name', 'phone', 'address', 'profile_image']
         update_data = {k: v for k, v in data.items() if k in allowed_fields}
-        
+
         if not update_data:
             return jsonify({'error': 'No valid fields to update'}), 400
-        
+
         # Update user
         query, values = dict_to_sql_update('users', update_data, 'id = %s', (user_id,))
         Database.execute_query(query, values)
-        
+
         return jsonify({'message': 'Profile updated successfully'}), 200
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@user_bp.route('/profile/change-password', methods=['POST'])
+@login_required
+def change_password():
+    """Change user password"""
+    try:
+        # Get user_id from JWT token or session
+        user_id = getattr(request, 'user_id', None) or session.get('user_id')
+        user_type = getattr(request, 'user_type', None) or session.get('user_type')
+
+        # Check if user is logged in
+        if not user_id or user_type != 'user':
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        data = request.json
+
+        # Validate required fields
+        if not data.get('current_password') or not data.get('new_password'):
+            return jsonify({'error': 'Current password and new password are required'}), 400
+
+        # Get current user password
+        user = Database.execute_query(
+            "SELECT password FROM users WHERE id = %s",
+            (user_id,),
+            fetch_one=True
+        )
+
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Verify current password
+        if not check_password_hash(user['password'], data['current_password']):
+            return jsonify({'error': 'Current password is incorrect'}), 401
+
+        # Validate new password length
+        if len(data['new_password']) < 6:
+            return jsonify({'error': 'New password must be at least 6 characters'}), 400
+
+        # Hash new password
+        new_hashed_password = generate_password_hash(data['new_password'], method='pbkdf2:sha256')
+
+        # Update password
+        Database.execute_query(
+            "UPDATE users SET password = %s WHERE id = %s",
+            (new_hashed_password, user_id)
+        )
+
+        return jsonify({'message': 'Password changed successfully'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

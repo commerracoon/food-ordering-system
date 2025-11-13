@@ -14,8 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Check user session
 function checkUserSession() {
-    const userName = localStorage.getItem('userName');
-    const userType = localStorage.getItem('userType');
+    const userName = localStorage.getItem(STORAGE_KEYS.USER_NAME);
+    const userType = localStorage.getItem(STORAGE_KEYS.USER_TYPE);
 
     if (userName) {
         document.getElementById('user-info').textContent = `Welcome, ${userName}!`;
@@ -30,31 +30,30 @@ function checkUserSession() {
 }
 
 // Logout function
-async function logout() {
-    const userType = localStorage.getItem('userType') || 'user';
-    const endpoint = userType === 'admin' ? '/admin/logout' : '/user/logout';
+async function logoutUser() {
+    const userType = localStorage.getItem(STORAGE_KEYS.USER_TYPE) || 'user';
 
     try {
-        await fetch(`${API_URL}${endpoint}`, {
-            method: 'POST',
-            credentials: 'include'
-        });
+        showLoading('Logging out...');
+
+        const endpoint = userType === 'admin' ? API_ENDPOINTS.ADMIN_LOGOUT : API_ENDPOINTS.USER_LOGOUT;
+        await apiPost(endpoint, {});
+
+        clearUserSession();
+
+        hideLoading();
+
+        await showSuccess('Logged Out', 'You have been logged out successfully.');
+
+        // Redirect to login page
+        window.location.href = 'modules/auth/login.html';
+
     } catch (error) {
-        console.error('Logout error:', error);
+        hideLoading();
+        // Even if API call fails, clear local session and redirect
+        clearUserSession();
+        window.location.href = 'modules/auth/login.html';
     }
-
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userType');
-
-    Swal.fire({
-        icon: 'success',
-        title: 'Logged Out',
-        text: 'You have been logged out successfully.',
-        timer: 2000,
-        showConfirmButton: false
-    });
-
-    checkUserSession();
 }
 
 // Load categories
