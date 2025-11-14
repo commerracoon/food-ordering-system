@@ -233,11 +233,25 @@ def place_order():
 def get_my_orders():
     """Get current user's orders"""
     try:
-        # Check if user is logged in
-        if 'user_id' not in session or session.get('user_type') != 'user':
-            return jsonify({'error': 'Unauthorized'}), 401
+        # Check if user is logged in - support JWT token or session cookie
+        user_id = None
+        user_type = None
 
-        user_id = session['user_id']
+        # Try JWT token first
+        token = get_token_from_request()
+        if token:
+            payload = decode_token(token)
+            if payload:
+                user_id = payload.get('user_id')
+                user_type = payload.get('user_type')
+
+        # Fallback to session
+        if not user_id:
+            user_id = session.get('user_id')
+            user_type = session.get('user_type')
+
+        if not user_id or user_type != 'user':
+            return jsonify({'error': 'Unauthorized'}), 401
 
         # Get orders
         orders = Database.execute_query(
@@ -261,12 +275,20 @@ def get_my_orders():
 def get_order_details(order_id):
     """Get order details with items"""
     try:
-        # Check if user is logged in
-        if 'user_id' not in session:
-            return jsonify({'error': 'Unauthorized'}), 401
+        # Check if user is logged in - support JWT token or session cookie
+        user_id = None
+        user_type = None
 
-        user_id = session['user_id']
-        user_type = session.get('user_type')
+        token = get_token_from_request()
+        if token:
+            payload = decode_token(token)
+            if payload:
+                user_id = payload.get('user_id')
+                user_type = payload.get('user_type')
+
+        if not user_id:
+            user_id = session.get('user_id')
+            user_type = session.get('user_type')
 
         # Get order
         order = Database.execute_query(
@@ -326,8 +348,19 @@ def get_order_details(order_id):
 def get_all_orders():
     """Get all orders (admin only)"""
     try:
-        # Check if admin is logged in
-        if session.get('user_type') != 'admin':
+        # Check if admin is logged in - support JWT token or session cookie
+        user_type = None
+
+        token = get_token_from_request()
+        if token:
+            payload = decode_token(token)
+            if payload:
+                user_type = payload.get('user_type')
+
+        if not user_type:
+            user_type = session.get('user_type')
+
+        if user_type != 'admin':
             return jsonify({'error': 'Unauthorized. Admin access required'}), 403
 
         status = request.args.get('status')
@@ -360,8 +393,19 @@ def get_all_orders():
 def update_order_status(order_id):
     """Update order status (admin only)"""
     try:
-        # Check if admin is logged in
-        if session.get('user_type') != 'admin':
+        # Check if admin is logged in - support JWT token or session cookie
+        user_type = None
+
+        token = get_token_from_request()
+        if token:
+            payload = decode_token(token)
+            if payload:
+                user_type = payload.get('user_type')
+
+        if not user_type:
+            user_type = session.get('user_type')
+
+        if user_type != 'admin':
             return jsonify({'error': 'Unauthorized. Admin access required'}), 403
 
         data = request.json
@@ -388,6 +432,49 @@ def update_order_status(order_id):
         Database.execute_query(update_query, tuple(params))
 
         return jsonify({'message': 'Order status updated successfully'}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@order_bp.route('/update/<int:order_id>', methods=['PUT'])
+def update_order(order_id):
+    """Update allowed order fields (admin only)"""
+    try:
+        # Check admin - support JWT token or session cookie
+        user_type = None
+
+        token = get_token_from_request()
+        if token:
+            payload = decode_token(token)
+            if payload:
+                user_type = payload.get('user_type')
+
+        if not user_type:
+            user_type = session.get('user_type')
+
+        if user_type != 'admin':
+            return jsonify({'error': 'Unauthorized. Admin access required'}), 403
+
+        data = request.json or {}
+        allowed = ['delivery_address', 'special_instructions', 'payment_status']
+        fields = []
+        params = []
+
+        for k in allowed:
+            if k in data:
+                fields.append(f"{k} = %s")
+                params.append(data.get(k))
+
+        if not fields:
+            return jsonify({'error': 'No updatable fields provided'}), 400
+
+        update_query = "UPDATE orders SET " + ", ".join(fields) + " WHERE id = %s"
+        params.append(order_id)
+
+        Database.execute_query(update_query, tuple(params))
+
+        return jsonify({'message': 'Order updated successfully'}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500

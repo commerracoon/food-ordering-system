@@ -4,7 +4,8 @@
   "description": "A desktop food ordering system built with Electron and Python",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "node ./scripts/start-all.js",
+    "electron-only": "electron .",
     "dev": "electron . --dev",
     "build:css": "tailwindcss -i ./input.css -o ./output.css --watch",
     "build:css:prod": "tailwindcss -i ./input.css -o ./output.css --minify"

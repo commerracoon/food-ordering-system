@@ -123,14 +123,14 @@ async function navLogout() {
         showCancelButton: true,
         confirmButtonText: 'Yes, logout',
         cancelButtonText: 'Cancel',
-        confirmButtonColor: '#ff6b6b',
-        cancelButtonColor: '#95a5a6'
+        confirmButtonColor: APP_CONFIG.THEME.PRIMARY,
+        cancelButtonColor: APP_CONFIG.THEME.ACCENT
     });
     
     if (result.isConfirmed) {
         try {
             const userType = getUserType();
-            await logout(userType);
+            await apiLogout(userType);
             await Swal.fire({
                 icon: 'success',
                 title: 'Logged Out',

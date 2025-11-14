@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile - Food Ordering System</title>
     
+    <script src="../../common/js/config.js"></script>
+    <script src="../../common/js/tailwind-theme.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -12,38 +14,28 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- Common JS Files -->
-    <script src="../../common/js/config.js"></script>
     <script src="../../common/js/api.js"></script>
     <script src="../../common/js/auth.js"></script>
     <script src="../../common/js/utils.js"></script>
     
-    <!-- Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#ff6b6b',
-                        secondary: '#4ecdc4',
-                        accent: '#ffe66d',
-                        dark: '#2d3436',
-                        light: '#f8f9fa',
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Common CSS -->
+    <link rel="stylesheet" href="../../common/css/common.css">
+
+    <!-- Tailwind theme loaded from common/tailwind-theme.js -->
 </head>
 <body class="bg-gray-100">
     <!-- Header -->
-    <header class="bg-gradient-to-r from-primary to-secondary text-white shadow-lg">
+    <header style="background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);" class="text-white shadow-lg">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold">🍔 My Profile</h1>
+            <h1 class="text-2xl font-bold">My Profile</h1>
             <div class="flex items-center gap-4">
-                <button onclick="window.location.href='dashboard.html'" class="bg-white text-primary px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all">
-                    ← Back to Dashboard
+                <button onclick="window.location.href='dashboard.html'" class="logout-btn">
+                    Dashboard
                 </button>
-                <button onclick="logout()" class="bg-white text-primary px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all">
+                <button onclick="confirmLogout()" class="logout-btn">
                     Logout
                 </button>
             </div>
@@ -90,7 +82,7 @@
                 </div>
 
                 <div class="flex justify-end">
-                    <button type="submit" class="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all">
+                    <button type="submit" class="text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all" style="background-color: var(--color-primary);">
                         💾 Save Changes
                     </button>
                 </div>
@@ -243,21 +235,8 @@
             }
         });
 
-        // Logout function
-        async function logout() {
-            try {
-                showLoading('Logging out...');
-                await apiPost(API_ENDPOINTS.USER_LOGOUT, {});
-                clearUserSession();
-                hideLoading();
-                await showSuccess('Logged Out', 'You have been logged out successfully.');
-                window.location.href = '../auth/login.html';
-            } catch (error) {
-                hideLoading();
-                clearUserSession();
-                window.location.href = '../auth/login.html';
-            }
-        }
+        // Use global confirmation
+        function logout() { return confirmLogout(); }
     </script>
 </body>
 </html>

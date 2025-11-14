@@ -3,6 +3,16 @@
  * Apply consistent styling across all pages
  */
 
+:root {
+    /* Centralized theme variables */
+    --color-primary: #ff6b6b;
+    --color-secondary: #4ecdc4;
+    --color-accent: #ffe66d;
+    --color-dark: #2d3436;
+    --color-light: #f8f9fa;
+    --color-on-primary: #ffffff;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -11,13 +21,14 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* Theme colors are defined as CSS variables for easy theming */
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
     min-height: 100vh;
 }
 
 /* Common Navigation Bar */
 .navbar {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     position: sticky;
     top: 0;
@@ -104,6 +115,22 @@ body {
     gap: 0.5rem;
 }
 
+/* Logout button: always white background with themed text color for contrast */
+.logout-btn {
+    background: white !important;
+    color: var(--color-primary) !important;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.logout-btn:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+    transform: translateY(-1px);
+}
+
 /* Content Container */
 .content-container {
     max-width: 1200px;
@@ -113,8 +140,8 @@ body {
 
 /* Page Header */
 .page-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: var(--color-on-primary, white);
     padding: 2rem;
     border-radius: 1rem;
     margin-bottom: 2rem;
@@ -162,4 +189,50 @@ body {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Small button styles used in admin tables */
+.btn-small {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.85rem;
+    border-radius: 0.35rem;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary { background: var(--color-primary); color: var(--color-on-primary); }
+.btn-secondary { background: var(--color-secondary); color: #fff; }
+.btn-outline { background: transparent; border: 1px solid rgba(0,0,0,0.08); }
+
+.dropdown { position: relative; display: inline-block; }
+.dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: white;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 140px;
+    z-index: 50;
+}
+
+.dropdown-menu.hidden { display: none; }
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #fff;
+}
+.status-pending { background: #f6ad55; }
+.status-confirmed { background: #48bb78; }
+.status-preparing { background: #63b3ed; }
+.status-ready { background: #38b2ac; }
+.status-delivered { background: #4a5568; }
+.status-cancelled { background: #e53e3e; }
 

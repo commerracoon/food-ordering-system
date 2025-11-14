@@ -127,10 +127,33 @@ function hideLoading() {
  * @param {string} message - Success message
  * @param {Function} callback - Optional callback function
  */
-function showSuccess(message, callback = null) {
-    Swal.fire({
+function showSuccess(titleOrMessage, messageOrCallback = null, maybeCallback = null) {
+    // Support multiple calling conventions used across the codebase:
+    // showSuccess(message)
+    // showSuccess(title, message)
+    // showSuccess(message, callback)
+    let title = 'Success';
+    let message = '';
+    let callback = null;
+
+    if (typeof messageOrCallback === 'function') {
+        // showSuccess(message, callback)
+        message = titleOrMessage;
+        callback = messageOrCallback;
+    } else if (typeof messageOrCallback === 'string') {
+        // showSuccess(title, message)
+        title = titleOrMessage;
+        message = messageOrCallback;
+        callback = typeof maybeCallback === 'function' ? maybeCallback : null;
+    } else {
+        // showSuccess(message)
+        message = titleOrMessage;
+        callback = typeof maybeCallback === 'function' ? maybeCallback : null;
+    }
+
+    return Swal.fire({
         icon: 'success',
-        title: 'Success',
+        title: title,
         text: message
     }).then(() => {
         if (callback) callback();
@@ -160,8 +183,8 @@ function showConfirm(message, onConfirm) {
         text: message,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
+        confirmButtonColor: APP_CONFIG.THEME.PRIMARY,
+        cancelButtonColor: APP_CONFIG.THEME.ACCENT,
         confirmButtonText: 'Yes'
     }).then((result) => {
         if (result.isConfirmed && onConfirm) {

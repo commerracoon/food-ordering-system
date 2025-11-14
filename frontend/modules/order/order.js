@@ -150,16 +150,18 @@ function addToCart(itemId) {
     saveCartToStorage(); // Save cart to localStorage
 
     // SweetAlert2 toast notification
-    Swal.fire({
-        icon: 'success',
-        title: 'Added to cart!',
-        text: `${item.name} has been added to your cart`,
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 2000,
-        timerProgressBar: true
-    });
+        Swal.fire({
+            icon: 'success',
+            title: 'Added to cart!',
+            text: `${item.name} has been added to your cart`,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true,
+            background: 'white',
+            color: '#111827'
+        });
 }
 
 // Update cart display
@@ -170,15 +172,22 @@ function updateCart() {
     
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Update navbar/cart badge if present
+    if (cartCount) cartCount.textContent = totalItems;
+    if (cartTotal) cartTotal.textContent = `$${totalPrice.toFixed(2)}`;
+    // Update cart bar summary if present
+    const cartCountBar = document.getElementById('cart-count-bar');
+    const cartTotalBar = document.getElementById('cart-total-bar');
+    if (cartCountBar) cartCountBar.textContent = totalItems;
+    if (cartTotalBar) cartTotalBar.textContent = `$${totalPrice.toFixed(2)}`;
     
-    cartCount.textContent = totalItems;
-    cartTotal.textContent = `$${totalPrice.toFixed(2)}`;
-    
+    if (!cartItems) return; // nothing to render into on this page
+
     if (cart.length === 0) {
         cartItems.innerHTML = '<p class="empty-cart">Your cart is empty</p>';
         return;
     }
-    
+
     cartItems.innerHTML = cart.map(item => `
         <div class="cart-item">
             <div class="cart-item-info">
@@ -233,7 +242,7 @@ function showCheckout() {
             icon: 'warning',
             title: 'Cart is Empty',
             text: 'Please add some items to your cart first!',
-            confirmButtonColor: '#ff6b6b'
+            confirmButtonColor: APP_CONFIG.THEME.PRIMARY
         });
         return;
     }
@@ -251,8 +260,8 @@ function showCheckout() {
             confirmButtonText: 'Go to Login',
             showCancelButton: true,
             cancelButtonText: 'Continue Shopping',
-            confirmButtonColor: '#4ecdc4',
-            cancelButtonColor: '#95a5a6'
+            confirmButtonColor: APP_CONFIG.THEME.SECONDARY,
+            cancelButtonColor: APP_CONFIG.THEME.ACCENT
         }).then((result) => {
             if (result.isConfirmed) {
                 // Save cart before redirecting
@@ -334,7 +343,7 @@ function setupCheckoutForm() {
             document.getElementById('checkout-modal').classList.remove('show');
 
             // Show success with SweetAlert2
-            await Swal.fire({
+                await Swal.fire({
                 icon: 'success',
                 title: 'Order Placed Successfully!',
                 html: `
@@ -344,7 +353,7 @@ function setupCheckoutForm() {
                     <p class="text-green-600 mt-3">Thank you for your order, ${userName}!</p>
                 `,
                 confirmButtonText: 'Continue Shopping',
-                confirmButtonColor: '#4ecdc4',
+                confirmButtonColor: APP_CONFIG.THEME.SECONDARY,
                 showClass: {
                     popup: 'animate__animated animate__bounceIn'
                 },

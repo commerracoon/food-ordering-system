@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Dashboard - Food Ordering System</title>
     
+    <script src="../../common/js/config.js"></script>
+    <script src="../../common/js/tailwind-theme.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -12,27 +14,17 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- Common JS Files -->
-    <script src="../../common/js/config.js"></script>
     <script src="../../common/js/api.js"></script>
     <script src="../../common/js/auth.js"></script>
     <script src="../../common/js/utils.js"></script>
     
-    <!-- Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#ff6b6b',
-                        secondary: '#4ecdc4',
-                        accent: '#ffe66d',
-                        dark: '#2d3436',
-                        light: '#f8f9fa',
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Common CSS -->
+    <link rel="stylesheet" href="../../common/css/common.css">
+
+    <!-- Tailwind theme loaded from common/tailwind-theme.js -->
 </head>
 <body class="bg-gray-100">
     <!-- Header -->
@@ -41,7 +33,7 @@
             <h1 class="text-2xl font-bold">🍔 Food Ordering System</h1>
             <div class="flex items-center gap-4">
                 <span id="user-name" class="font-semibold"></span>
-                <button onclick="logout()" class="bg-white text-primary px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all">
+                <button onclick="confirmLogout()" class="logout-btn">
                     Logout
                 </button>
             </div>
@@ -58,10 +50,10 @@
                     <p class="text-gray-600">Ready to order some delicious food?</p>
                 </div>
                 <div class="flex gap-3">
-                    <button onclick="goToOrdering()" class="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2">
+                    <button onclick="goToOrdering()" style="background-color: var(--color-primary);" class="text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2">
                         🍕 Order Food
                     </button>
-                    <button onclick="goToProfile()" class="bg-secondary text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2">
+                    <button onclick="goToProfile()" class="text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2" style="background-color: var(--color-secondary);">
                         👤 My Profile
                     </button>
                 </div>
@@ -74,7 +66,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-gray-500 text-sm">Total Orders</p>
-                        <p id="total-orders" class="text-3xl font-bold text-primary">0</p>
+                        <p id="total-orders" class="text-3xl font-bold" style="color: var(--color-primary);">0</p>
                     </div>
                     <div class="text-4xl">📦</div>
                 </div>
@@ -84,7 +76,7 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-gray-500 text-sm">Pending Orders</p>
-                        <p id="pending-orders" class="text-3xl font-bold text-secondary">0</p>
+                        <p id="pending-orders" class="text-3xl font-bold" style="color: var(--color-secondary);">0</p>
                     </div>
                     <div class="text-4xl">⏳</div>
                 </div>
@@ -109,7 +101,7 @@
                     <div>
                         <h3 class="text-xl font-bold text-gray-800 mb-2">Order Food</h3>
                         <p class="text-gray-600">Browse our menu and place your order</p>
-                        <button class="mt-3 bg-primary text-white px-4 py-2 rounded-lg font-semibold hover:bg-opacity-90">
+                        <button class="mt-3 text-white px-4 py-2 rounded-lg font-semibold hover:bg-opacity-90" style="background-color: var(--color-primary);">
                             Start Ordering →
                         </button>
                     </div>
@@ -122,8 +114,21 @@
                     <div>
                         <h3 class="text-xl font-bold text-gray-800 mb-2">My Profile</h3>
                         <p class="text-gray-600">Edit your profile and change password</p>
-                        <button class="mt-3 bg-secondary text-white px-4 py-2 rounded-lg font-semibold hover:bg-opacity-90">
+                        <button class="mt-3 text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90" style="background-color: var(--color-secondary);">
                             View Profile →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-xl transition-all cursor-pointer" onclick="goToOrderHistory()">
+                <div class="flex items-center gap-4">
+                    <div class="text-6xl">📋</div>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Order History</h3>
+                        <p class="text-gray-600">View and track all your orders</p>
+                        <button class="mt-3 text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90" style="background-color: var(--color-secondary);">
+                            View History →
                         </button>
                     </div>
                 </div>
@@ -159,6 +164,8 @@
 
             // Load dashboard data
             await loadDashboardData();
+            // Load recent orders preview
+            await loadRecentOrders(3);
         });
 
         // Load dashboard data
@@ -169,6 +176,48 @@
                 console.log('Dashboard loaded for user:', currentUser);
             } catch (error) {
                 console.error('Error loading dashboard:', error);
+            }
+        }
+
+        // Fetch latest orders for preview and render clickable cards
+        async function loadRecentOrders(limit = 3) {
+            try {
+                const endpoint = `${API_ENDPOINTS.ORDER_DETAILS}/my-orders`;
+                const resp = await apiGet(endpoint);
+                const orders = resp.orders || [];
+                if (!orders || orders.length === 0) {
+                    document.getElementById('recent-orders').innerHTML = '<p class="text-gray-400 text-center py-8">No recent orders</p>';
+                    return;
+                }
+
+                // sort descending by created_at
+                orders.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+                const recent = orders.slice(0, limit);
+
+                const container = document.getElementById('recent-orders');
+                let html = '<div class="grid grid-cols-1 md:grid-cols-3 gap-4">';
+                recent.forEach(o => {
+                    const created = new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    html += `
+                        <div class="p-4 border rounded-lg cursor-pointer hover:shadow-md bg-white" onclick="openOrderInHistory(${o.id})">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="text-sm text-gray-500">Order #${o.order_number || o.id}</div>
+                                    <div class="font-semibold text-lg mt-1">${APP_CONFIG.DEFAULT_CURRENCY}${parseFloat(o.total_amount).toFixed(2)}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm text-gray-500">${created}</div>
+                                    <div class="text-xs mt-1 px-2 py-1 rounded-full" style="background: var(--color-secondary); color: white; font-weight:600;">${o.status}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (err) {
+                console.error('Failed to load recent orders', err);
+                document.getElementById('recent-orders').innerHTML = '<p class="text-gray-400 text-center py-8">Failed to load recent orders</p>';
             }
         }
 
@@ -183,30 +232,18 @@
             window.location.href = 'profile.html';
         }
 
-        // Logout function
-        async function logout() {
-            try {
-                showLoading('Logging out...');
-
-                await apiPost(API_ENDPOINTS.USER_LOGOUT, {});
-
-                // Clear session
-                clearUserSession();
-
-                hideLoading();
-
-                await showSuccess('Logged Out', 'You have been logged out successfully.');
-
-                // Redirect to login page
-                window.location.href = '../auth/login.html';
-
-            } catch (error) {
-                hideLoading();
-                // Even if API call fails, clear local session and redirect
-                clearUserSession();
-                window.location.href = '../auth/login.html';
-            }
+        // Navigate to order history page
+        function goToOrderHistory() {
+            window.location.href = '../order/order-history.html';
         }
+
+        // Open order in history page and auto-show details
+        function openOrderInHistory(orderId) {
+            window.location.href = `../order/order-history.html?open_order=${orderId}`;
+        }
+
+        // Use global confirmLogout helper (defined in common/js/auth.js)
+        function logout() { return confirmLogout(); }
     </script>
 </body>
 </html>

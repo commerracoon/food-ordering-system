@@ -31,6 +31,10 @@ const API_ENDPOINTS = {
     ORDER_PLACE: `${API_BASE_URL}/order/place`,
     ORDER_LIST: `${API_BASE_URL}/order/list`,
     ORDER_DETAILS: `${API_BASE_URL}/order`,
+    // Admin order endpoints
+    ADMIN_ORDER_LIST: `${API_BASE_URL}/order/all`,
+    ORDER_UPDATE_STATUS: `${API_BASE_URL}/order/update-status`,
+    ORDER_UPDATE: `${API_BASE_URL}/order/update`,
     
     // Invoice endpoints
     INVOICE_LIST: `${API_BASE_URL}/invoice/list`,
@@ -49,6 +53,15 @@ const API_ENDPOINTS = {
 const APP_CONFIG = {
     APP_NAME: 'Food Ordering System',
     VERSION: '1.0.0',
+    // Theme colors (centralized)
+    THEME: {
+        PRIMARY: '#ff6b6b',
+        SECONDARY: '#4ecdc4',
+        ACCENT: '#ffe66d',
+        DARK: '#2d3436',
+        LIGHT: '#f8f9fa',
+        ON_PRIMARY: '#ffffff'
+    },
     DEFAULT_CURRENCY: '$',
     TAX_RATE: 0.10,
     DELIVERY_FEE: 5.00,
@@ -89,6 +102,11 @@ const APP_CONFIG = {
         ADMIN: 'admin',
         SUPER_ADMIN: 'super_admin'
     }
+    ,
+    // Should the frontend clear user session on window/tab close? (true/false)
+    // If true, `clearUserSession()` will be called on unload/pagehide.
+    // Default: false to avoid surprising logouts during navigation.
+    CLEAR_SESSION_ON_CLOSE: false
 };
 
 // Local Storage Keys

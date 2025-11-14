@@ -246,8 +246,8 @@ async function deleteCategory(categoryId, categoryName, itemCount) {
         text: `Are you sure you want to delete "${categoryName}"?`,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#6b7280',
+        confirmButtonColor: APP_CONFIG.THEME.PRIMARY,
+        cancelButtonColor: APP_CONFIG.THEME.ACCENT,
         confirmButtonText: 'Yes, delete it!',
         cancelButtonText: 'Cancel'
     });
@@ -450,8 +450,8 @@ async function deleteMenuItem(itemId, itemName) {
         text: `Are you sure you want to delete "${itemName}"?`,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#6b7280',
+        confirmButtonColor: APP_CONFIG.THEME.PRIMARY,
+        cancelButtonColor: APP_CONFIG.THEME.ACCENT,
         confirmButtonText: 'Yes, delete it!',
         cancelButtonText: 'Cancel'
     });
@@ -480,8 +480,5 @@ function goToDashboard() {
     window.location.href = 'dashboard.html';
 }
 
-function logout() {
-    clearUserSession();
-    window.location.href = '../auth/login.html';
-}
+function logout() { return confirmLogout('admin'); }
 

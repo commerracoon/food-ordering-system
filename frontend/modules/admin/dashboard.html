@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Food Ordering System</title>
     
+    <script src="../../common/js/config.js"></script>
+    <script src="../../common/js/tailwind-theme.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -14,37 +16,25 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- Common CSS -->
+    <link rel="stylesheet" href="../../common/css/common.css">
+
     <!-- Common JS Files -->
-    <script src="../../common/js/config.js"></script>
     <script src="../../common/js/api.js"></script>
     <script src="../../common/js/auth.js"></script>
     <script src="../../common/js/utils.js"></script>
     
     <!-- Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#ff6b6b',
-                        secondary: '#4ecdc4',
-                        accent: '#ffe66d',
-                        dark: '#2d3436',
-                        light: '#f8f9fa',
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Tailwind theme loaded from common/tailwind-theme.js -->
 </head>
 <body class="bg-gray-100">
     <!-- Header -->
-    <header class="bg-gradient-to-r from-primary to-secondary text-white shadow-lg">
+    <header style="background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);" class="text-white shadow-lg">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
             <h1 class="text-2xl font-bold">🍔 Admin Dashboard</h1>
             <div class="flex items-center gap-4">
                 <span id="admin-name" class="font-semibold"></span>
-                <button onclick="logout()" class="bg-white text-primary px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all">
+                <button onclick="confirmLogout('admin')" class="logout-btn">
                     Logout
                 </button>
             </div>
@@ -118,6 +108,20 @@
         <div id="content-area" class="bg-white rounded-lg shadow-md p-6">
             <div id="orders-content">
                 <h2 class="text-2xl font-bold mb-4">Recent Orders</h2>
+                <div class="mb-4 flex items-center gap-3">
+                    <select id="filter-status" class="px-3 py-2 border rounded" onchange="loadAdminOrders(this.value)">
+                        <option value="">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="preparing">Preparing</option>
+                        <option value="ready">Ready</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    <input id="filter-search" type="text" placeholder="Search order # or customer" class="px-3 py-2 border rounded w-full" oninput="debouncedSearch(this.value)">
+                    <button onclick="loadAdminOrders(document.getElementById('filter-status').value)" class="px-4 py-2 bg-primary text-white rounded">Apply</button>
+                </div>
+
                 <div id="orders-list" class="space-y-4">
                     <p class="text-gray-500">Loading orders...</p>
                 </div>
@@ -225,31 +229,10 @@
             window.location.href = 'menu-management.html';
         }
         
-        // Logout
-        async function logout() {
-            try {
-                showLoading('Logging out...');
-
-                await apiPost(API_ENDPOINTS.ADMIN_LOGOUT, {});
-
-                // Clear session
-                clearUserSession();
-
-                hideLoading();
-
-                await showSuccess('Logged Out', 'You have been logged out successfully.');
-
-                // Redirect to login page
-                window.location.href = '../auth/login.html';
-
-            } catch (error) {
-                hideLoading();
-                // Even if API call fails, clear local session and redirect
-                clearUserSession();
-                window.location.href = '../auth/login.html';
-            }
-        }
+        // Use global confirmation for logout
+        function logout() { return confirmLogout('admin'); }
     </script>
+    <script src="./admin-orders.js"></script>
 </body>
 </html>
 

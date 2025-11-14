@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Food Ordering System</title>
     
-    <!-- Tailwind CSS -->
+    <!-- Load APP config and apply Tailwind theme, then load Tailwind -->
+    <script src="../../common/js/config.js"></script>
+    <script src="../../common/js/tailwind-theme.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- SweetAlert2 -->
@@ -17,25 +19,9 @@
     <!-- Common CSS -->
     <link rel="stylesheet" href="../../common/css/common.css">
     
-    <!-- Tailwind Config -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#ff6b6b',
-                        secondary: '#4ecdc4',
-                        accent: '#ffe66d',
-                        dark: '#2d3436',
-                        light: '#f8f9fa',
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Tailwind theme is applied via common/tailwind-theme.js using APP_CONFIG.THEME -->
     
     <!-- Common JS Files -->
-    <script defer src="../../common/js/config.js"></script>
     <script defer src="../../common/js/api.js"></script>
     <script defer src="../../common/js/auth.js"></script>
     <script defer src="../../common/js/utils.js"></script>

@@ -8,7 +8,22 @@
  * @returns {Object} Headers object with Authorization if token exists
  */
 function getAuthHeaders() {
-    const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    // Prefer storageGet helper (reads sessionStorage then localStorage) if available
+    let token = null;
+    try {
+        if (typeof storageGet === 'function') {
+            token = storageGet(STORAGE_KEYS.AUTH_TOKEN);
+        }
+    } catch (e) {
+        // ignore
+    }
+    if (!token) {
+        try {
+            token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+        } catch (e) {
+            token = null;
+        }
+    }
     if (token) {
         return {
             'Authorization': `Bearer ${token}`
