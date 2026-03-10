@@ -3,11 +3,18 @@ Food Ordering System - Main Application
 Modular Flask application with MySQL database
 """
 
+# Ensure UTF-8 encoding for console output (fixes charmap codec errors on Windows)
+import sys
+import io
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+if sys.stderr.encoding != 'utf-8':
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 from flask import Flask, jsonify, request, session
 from flask_cors import CORS
 from datetime import timedelta
 import os
-import sys
 
 # Import common utilities
 from common import Database, Config, config

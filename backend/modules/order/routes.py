@@ -102,7 +102,7 @@ def get_menu_item(item_id):
         reviews = Database.execute_query(
             """SELECT 
                 f.id, f.rating, f.comment, f.created_at,
-                u.full_name as customer_name
+                u.email as customer_name
             FROM feedback f
             JOIN users u ON f.user_id = u.id
             WHERE f.menu_item_id = %s AND f.is_approved = TRUE
@@ -296,7 +296,7 @@ def get_order_details(order_id):
                 o.id, o.order_number, o.total_amount, o.status,
                 o.payment_method, o.payment_status, o.delivery_address,
                 o.special_instructions, o.created_at, o.delivered_at,
-                u.full_name as customer_name, u.phone as customer_phone,
+                u.phone as customer_phone,
                 u.email as customer_email
             FROM orders o
             JOIN users u ON o.user_id = u.id
@@ -369,7 +369,7 @@ def get_all_orders():
             SELECT
                 o.id, o.order_number, o.total_amount, o.status,
                 o.payment_method, o.payment_status, o.created_at,
-                u.full_name as customer_name, u.phone as customer_phone
+                u.phone as customer_phone
             FROM orders o
             JOIN users u ON o.user_id = u.id
         """

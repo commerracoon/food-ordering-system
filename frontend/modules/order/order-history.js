@@ -9,6 +9,61 @@ let currentPage = 1;
 const itemsPerPage = 5;
 let currentUser = null;
 
+// Global cache for order feedback status
+let orderFeedbackCache = {};
+let eligibleOrdersIds = [];
+let allUserFeedback = {}; // Cache user feedback by order_id
+
+/**
+ * Load eligible orders (orders without feedback)
+ */
+async function loadEligibleOrdersIds() {
+    try {
+        const resp = await apiGet(API_ENDPOINTS.FEEDBACK_ELIGIBLE);
+        eligibleOrdersIds = (resp.orders || []).map(o => o.id);
+    } catch (err) {
+        console.warn('Could not load eligible orders', err);
+        eligibleOrdersIds = [];
+    }
+}
+
+/**
+ * Load all user feedback (for displaying feedback details)
+ */
+async function loadUserFeedback() {
+    try {
+        const resp = await apiGet(API_ENDPOINTS.FEEDBACK_MY);
+        allUserFeedback = {};
+        if (resp.feedback && Array.isArray(resp.feedback)) {
+            resp.feedback.forEach(fb => {
+                allUserFeedback[fb.order_id] = fb;
+            });
+        }
+    } catch (err) {
+        console.warn('Could not load user feedback', err);
+        allUserFeedback = {};
+    }
+}
+
+/**
+ * Check if an order has feedback (based on eligible orders list)
+ */
+async function orderHasFeedback(orderId) {
+    if (orderFeedbackCache.hasOwnProperty(orderId)) {
+        return orderFeedbackCache[orderId];
+    }
+    
+    // If eligible orders not yet loaded, load them
+    if (eligibleOrdersIds.length === 0) {
+        await loadEligibleOrdersIds();
+    }
+    
+    // Order has feedback if it's NOT in the eligible list
+    const hasFeedback = !eligibleOrdersIds.includes(orderId);
+    orderFeedbackCache[orderId] = hasFeedback;
+    return hasFeedback;
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
     // Check authentication
@@ -17,7 +72,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const sess = await checkSession();
             if (sess && sess.logged_in) {
-                // If backend returned limited info, fetch profile for complete user data
                 let userId = sess.user_id || null;
                 let username = sess.username || null;
                 let userType = sess.user_type || 'user';
@@ -28,7 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const profileUser = profileResp.user || profileResp.data || null;
                         if (profileUser) {
                             userId = userId || profileUser.id || profileUser.user_id;
-                            username = username || profileUser.username || profileUser.full_name || profileUser.email;
+                            username = username || profileUser.username || profileUser.email;
                         }
                     } catch (profileErr) {
                         console.warn('Could not fetch profile during session fallback:', profileErr);
@@ -36,68 +90,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 if (userId && username) {
-                    // Save basic session info to localStorage so frontend utilities work
                     saveUserSession({ id: userId, username: username, user_type: userType }, null);
-                } else {
-                    // Not enough info to populate session; still allow the page to attempt API calls
-                    console.warn('Session present but user info incomplete; proceeding without localStorage values.');
                 }
-
-                } else {
-                    // Show a friendly message and let the user choose to login or go back
-                    try {
-                                const res = await Swal.fire({
-                                    title: 'Not signed in',
-                                    text: 'Please sign in to view your order history.',
-                                    icon: 'warning',
-                                    showCancelButton: true,
-                                    confirmButtonText: 'Go to Login',
-                                    cancelButtonText: 'Back to Dashboard',
-                                    confirmButtonColor: APP_CONFIG.THEME.PRIMARY
-                                });
-
-                        if (res.isConfirmed) {
-                            window.location.href = '../auth/login.html';
-                        } else {
-                            window.location.href = '../user/dashboard.html';
-                        }
-                    } catch (swalErr) {
-                        // Fallback: if SweetAlert is not available or fails, redirect as before
-                        console.error('SweetAlert failed, falling back to redirect:', swalErr);
-                        window.location.href = '../auth/login.html';
-                    }
-                    return;
-                }
+            } else {
+                window.location.href = '../auth/login.html';
+                return;
+            }
         } catch (err) {
             console.error('Session fallback check failed:', err);
-            try {
-                const res = await Swal.fire({
-                    title: 'Session Check Failed',
-                    text: 'Could not verify your session. Would you like to retry or go to login?',
-                    icon: 'error',
-                    showCancelButton: true,
-                    confirmButtonText: 'Go to Login',
-                    cancelButtonText: 'Retry',
-                    confirmButtonColor: APP_CONFIG.THEME.PRIMARY
-                });
-
-                if (res.isConfirmed) {
-                    window.location.href = '../auth/login.html';
-                } else {
-                    // Try reloading the page (which will re-run the session check)
-                    window.location.reload();
-                }
-            } catch (swalErr) {
-                console.error('SweetAlert failed, falling back to redirect:', swalErr);
-                window.location.href = '../auth/login.html';
-            }
+            window.location.href = '../auth/login.html';
             return;
         }
     }
 
     // Get current user
     currentUser = getCurrentUser();
-    document.getElementById('user-name').textContent = currentUser.userName;
+    // Safely set username in any present UI element(s)
+    const userNameEl = document.getElementById('user-name');
+    const navbarUserEl = document.getElementById('navbar-username');
+    if (userNameEl && currentUser) userNameEl.textContent = currentUser.userName;
+    if (navbarUserEl && currentUser) navbarUserEl.textContent = currentUser.userName;
+
+    // Load eligible orders and user feedback (use fresh session)
+    await Promise.all([
+        loadEligibleOrdersIds(),
+        loadUserFeedback()
+    ]);
 
     // Load orders
     await loadOrders();
@@ -251,11 +269,6 @@ function displayOrders() {
                         <button class="btn-small btn-primary" onclick="viewOrderDetails(${order.id})">
                             <i class="fas fa-eye"></i> View Details
                         </button>
-                        ${order.status === 'delivered' ? `
-                            <button class="btn-small btn-secondary" onclick="provideFeedback(${order.id})">
-                                <i class="fas fa-star"></i> Leave Feedback
-                            </button>
-                        ` : ''}
                         ${order.status === 'pending' || order.status === 'confirmed' ? `
                             <button class="btn-small btn-outline" onclick="cancelOrder(${order.id})">
                                 <i class="fas fa-times"></i> Cancel Order
@@ -269,6 +282,8 @@ function displayOrders() {
 
     html += '</div>';
     container.innerHTML = html;
+    
+    // Feedback status is now handled in the order details modal
 }
 
 /**
@@ -473,7 +488,7 @@ async function viewOrderDetails(orderId) {
             </div>
 
             <!-- Payment Information -->
-            <div style="background: #f9fafb; border-radius: 8px; padding: 1rem;">
+            <div style="background: #f9fafb; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
                 <h4 style="margin: 0 0 0.75rem 0; font-size: 0.875rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Payment Information</h4>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-size: 0.875rem;">
                     <span style="color: #6b7280;">Method</span>
@@ -487,21 +502,82 @@ async function viewOrderDetails(orderId) {
                 </div>
             </div>
 
+            <!-- Feedback Section (will be populated based on order status) -->
+            <div id="feedback-section-${order.id}"></div>
+
             <!-- Action Buttons -->
-            <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem;">
-                <button class="btn-small btn-primary" style="flex: 1; justify-content: center;" onclick="printOrder(${order.id})">
-                    <i class="fas fa-print"></i> Print Order
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #e5e7eb; display: flex; gap: 0.75rem; justify-content: flex-end;">
+                <button class="btn-small" style="background: #6b7280; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 500;" onclick="closeModal()">
+                    <i class="fas fa-times"></i> Close
                 </button>
-                ${order.status === 'delivered' ? `
-                    <button class="btn-small btn-secondary" style="flex: 1; justify-content: center;" onclick="provideFeedback(${order.id}); closeModal();">
-                        <i class="fas fa-star"></i> Leave Feedback
-                    </button>
-                ` : ''}
+                <button class="btn-small btn-primary" style="padding: 0.75rem 1.5rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;" onclick="window.print()">
+                    <i class="fas fa-print"></i> Print Receipt
+                </button>
             </div>
         `;
 
         document.getElementById('modal-order-title').textContent = `Order #${order.order_number}`;
         document.getElementById('order-modal').style.display = 'block';
+
+        // Populate feedback section if order is delivered
+        if (order.status === 'delivered') {
+            const feedbackSection = document.getElementById(`feedback-section-${order.id}`);
+            const feedback = allUserFeedback[order.id];
+
+            if (feedback) {
+                // Display existing feedback
+                const fullStars = '★'.repeat(feedback.rating);
+                const emptyStars = '☆'.repeat(5 - feedback.rating);
+                const starsDisplay = fullStars + emptyStars;
+                const feedbackDate = new Date(feedback.created_at);
+                const formattedDate = feedbackDate.toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+
+                feedbackSection.innerHTML = `
+                    <div style="background: #fef3c7; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; border-left: 4px solid #f59e0b;">
+                        <h4 style="margin: 0 0 0.75rem 0; font-size: 0.875rem; font-weight: 600; color: #92400e;">⭐ Your Feedback</h4>
+                        
+                        <div style="margin-bottom: 0.75rem;">
+                            <span style="display: block; font-size: 0.75rem; color: #b45309; font-weight: 500;">Rating</span>
+                            <span style="font-size: 1.25rem; color: #fbbf24;">${starsDisplay}</span>
+                            <span style="margin-left: 8px; color: #92400e;">(${feedback.rating}/${5} stars)</span>
+                        </div>
+
+                        ${feedback.comment ? `
+                            <div style="margin-bottom: 0.75rem;">
+                                <span style="display: block; font-size: 0.75rem; color: #b45309; font-weight: 500;">Comment</span>
+                                <p style="margin: 0.25rem 0 0 0; color: #78350f; font-size: 0.875rem;">${feedback.comment}</p>
+                            </div>
+                        ` : ''}
+
+                        <div style="margin-bottom: 0.5rem;">
+                            <span style="display: block; font-size: 0.75rem; color: #b45309; font-weight: 500;">Status</span>
+                            <span style="display: inline-block; padding: 4px 8px; border-radius: 3px; font-size: 0.75rem; ${feedback.is_approved ? 'background-color: #d4edda; color: #155724;' : 'background-color: #fff3cd; color: #856404;'}">
+                                ${feedback.is_approved ? '✓ Approved' : '⏳ Pending Approval'}
+                            </span>
+                        </div>
+
+                        <div style="font-size: 0.75rem; color: #b45309;">
+                            Submitted on ${formattedDate}
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Show button to add feedback
+                feedbackSection.innerHTML = `
+                    <div style="background: #dbeafe; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; border-left: 4px solid #0ea5e9;">
+                        <h4 style="margin: 0 0 0.75rem 0; font-size: 0.875rem; font-weight: 600; color: #0369a1;">💬 No Feedback Yet</h4>
+                        <p style="margin: 0 0 0.75rem 0; color: #075985; font-size: 0.875rem;">Share your experience with this order by leaving feedback.</p>
+                        <button class="btn-small btn-primary" style="width: 100%; justify-content: center;" onclick="window.location.href='../feedback/submit-feedback.html?order_id=${order.id}'; closeModal();">
+                            <i class="fas fa-star"></i> Leave Feedback
+                        </button>
+                    </div>
+                `;
+            }
+        }
 
     } catch (error) {
         hideLoading();
@@ -527,171 +603,97 @@ document.addEventListener('click', (e) => {
     }
 });
 
-/**
- * Print order (basic implementation)
- */
-async function printOrder(orderId) {
-    try {
-        const order = allOrders.find(o => o.id === orderId);
-        if (!order) return;
-
-        // Get full order details
-        const endpoint = `${API_ENDPOINTS.ORDER_DETAILS}/order/${orderId}`;
-        const response = await apiGet(endpoint);
-        
-        const orderData = response.order;
-        const items = response.items || [];
-
-        // Build a MYR-style receipt (compact, monospace)
-        const merchantName = APP_CONFIG.APP_NAME || 'Food Ordering System';
-        const merchantAddress = '123 Food Street, Kuala Lumpur';
-        const receiptWidth = 320; // px, typical thermal receipt width
-
-        // Calculate subtotal from items
-        const calcSubtotal = items.reduce((s, it) => s + parseFloat(it.subtotal || (it.price * it.quantity)), 0);
-        const tax = parseFloat((calcSubtotal * (APP_CONFIG.TAX_RATE || 0)).toFixed(2));
-        const deliveryFee = parseFloat(orderData.delivery_fee || APP_CONFIG.DELIVERY_FEE || 0);
-        const totalAmount = parseFloat(orderData.total_amount || (calcSubtotal + tax + deliveryFee));
-
-        function fmt(v) { return formatCurrency(v, 'RM'); }
-
-        let printContent = `
-            <div style="font-family: 'Courier New', monospace; max-width: ${receiptWidth}px; margin: 0 auto; padding: 12px; font-size: 12px; color: #000;">
-                <div style="text-align:center; font-weight:700; font-size:14px;">${merchantName}</div>
-                <div style="text-align:center; font-size:11px; margin-bottom:8px;">${merchantAddress}</div>
-                <div style="border-top:1px dashed #000; margin:6px 0;"></div>
-
-                <div>Receipt: ${orderData.order_number}</div>
-                <div>Date: ${new Date(orderData.created_at).toLocaleString('en-GB')}</div>
-                <div>Status: ${capitalize(orderData.status)}</div>
-                <div style="border-top:1px dashed #000; margin:6px 0;"></div>
-
-                <div style="width:100%;">
-                    <table style="width:100%; font-family: monospace; font-size:12px;">
-                        <tbody>
-        `;
-
-        // Items: show name (possibly truncated), qty x unit, line total
-        items.forEach(it => {
-            const name = (it.item_name || '').substring(0, 24);
-            const qty = parseInt(it.quantity || 1);
-            const unit = parseFloat(it.price || 0);
-            const lineTotal = parseFloat(it.subtotal || (unit * qty));
-            printContent += `
-                        <tr>
-                            <td style="text-align:left; vertical-align:top;">${name}</td>
-                            <td style="text-align:right; width:48px;">${qty} x</td>
-                            <td style="text-align:right; width:80px;">${fmt(unit)}</td>
-                            <td style="text-align:right; width:80px;">${fmt(lineTotal)}</td>
-                        </tr>
-                        `;
-            if (it.special_request) {
-                const req = (it.special_request || '').substring(0, 40);
-                printContent += `
-                        <tr><td colspan="4" style="text-align:left; font-size:11px; color:#555;">Note: ${req}</td></tr>
-                        `;
-            }
+// Feedback modal logic
+window.orderingSystem = window.orderingSystem || {};
+window.orderingSystem.openFeedbackModal = async function(orderId) {
+    // Render feedback form as SweetAlert2 modal
+    const order = allOrders.find(o => o.id === orderId);
+    if (!order) return;
+    // If feedback already exists, do not allow submission
+    if (allUserFeedback[orderId]) {
+        Swal.fire({
+            title: 'Feedback Already Submitted',
+            text: 'You have already submitted feedback for this order.',
+            icon: 'info',
+            confirmButtonText: 'Close'
         });
-
-        printContent += `
-                        </tbody>
-                    </table>
-                </div>
-
-                <div style="border-top:1px dashed #000; margin:6px 0;"></div>
-                <div style="display:flex; justify-content:space-between; font-weight:600;">
-                    <div>Subtotal</div>
-                    <div>${fmt(calcSubtotal)}</div>
-                </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <div>Tax (${Math.round((APP_CONFIG.TAX_RATE||0)*100)}%)</div>
-                    <div>${fmt(tax)}</div>
-                </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <div>Delivery</div>
-                    <div>${fmt(deliveryFee)}</div>
-                </div>
-                <div style="border-top:1px solid #000; margin:6px 0;"></div>
-                <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:800;">
-                    <div>Total</div>
-                    <div>${fmt(totalAmount)}</div>
-                </div>
-
-                <div style="margin-top:8px;">Payment: ${capitalize(orderData.payment_method)} (${capitalize(orderData.payment_status)})</div>
-
-                <div style="border-top:1px dashed #000; margin:10px 0;"></div>
-                <div style="text-align:center; font-size:11px;">Thank you for ordering!</div>
-            </div>
-        `;
-
-        // Attempt to open a new window/tab for printing
-        let printed = false;
-        try {
-            const printWindow = window.open('', '', 'width=800,height=600');
-            if (printWindow && printWindow.document) {
-                printWindow.document.write(printContent);
-                printWindow.document.close();
-                // Give the new window a moment to render
-                setTimeout(() => {
-                    try { printWindow.focus(); printWindow.print(); printed = true; } catch (e) { /* ignore */ }
-                }, 250);
-            }
-        } catch (e) {
-            // window.open may be blocked or unavailable (Electron/embedded contexts)
-            console.warn('window.open print failed, will try iframe fallback', e);
-        }
-
-        // If window.open didn't work within a short timeframe, use an iframe fallback
-        if (!printed) {
-            try {
-                const iframe = document.createElement('iframe');
-                iframe.style.position = 'fixed';
-                iframe.style.right = '0';
-                iframe.style.bottom = '0';
-                iframe.style.width = '0';
-                iframe.style.height = '0';
-                iframe.style.border = '0';
-                document.body.appendChild(iframe);
-
-                const doc = iframe.contentWindow || iframe.contentDocument;
-                const idoc = doc.document || doc;
-                idoc.open();
-                idoc.write(printContent);
-                idoc.close();
-
-                // Wait a bit for content to render then print
-                setTimeout(() => {
-                    try {
-                        (iframe.contentWindow || iframe).focus();
-                        (iframe.contentWindow || iframe).print();
-                    } catch (err) {
-                        console.error('Iframe print failed', err);
-                        showError('Printing not supported in this environment.');
-                    } finally {
-                        // Clean up
-                        setTimeout(() => { document.body.removeChild(iframe); }, 500);
-                    }
-                }, 500);
-
-            } catch (err) {
-                console.error('Error using iframe print fallback:', err);
-                await showError('Printing not supported in this environment.');
-            }
-        }
-
-    } catch (error) {
-        console.error('Error printing order:', error);
-        await showError('Error', 'Failed to print order.');
+        return;
     }
-}
-
-/**
- * Provide feedback for delivered order
- */
-function provideFeedback(orderId) {
-    alert('Feedback feature coming soon! You will be able to rate items and leave reviews.');
-    // TODO: Implement feedback form
-}
+    let selectedRating = 0;
+    let comment = '';
+    await Swal.fire({
+        title: 'Leave Feedback',
+        html: `
+            <div style="text-align:left;">
+                <div style="margin-bottom:1rem;">
+                    <strong>Order:</strong> #${order.order_number}
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Rating:</strong><br/>
+                    <span id="swal-stars">
+                        ${[1,2,3,4,5].map(i => `<button type='button' class='swal-star' data-value='${i}' style='font-size:1.5em;border:none;background:none;color:#ccc;cursor:pointer;'>☆</button>`).join('')}
+                    </span>
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <strong>Comment (optional):</strong><br/>
+                    <textarea id="swal-comment" rows="3" style="width:100%;padding:6px;border-radius:4px;"></textarea>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Submit',
+        preConfirm: () => {
+            const rating = selectedRating;
+            const commentVal = document.getElementById('swal-comment').value;
+            if (!rating) {
+                Swal.showValidationMessage('Please select a rating');
+                return false;
+            }
+            return { rating, comment: commentVal };
+        },
+        didOpen: () => {
+            // Star picker logic
+            const stars = Swal.getHtmlContainer().querySelectorAll('.swal-star');
+            stars.forEach(star => {
+                star.addEventListener('click', function() {
+                    selectedRating = parseInt(this.getAttribute('data-value'));
+                    stars.forEach((s, idx) => {
+                        s.textContent = idx < selectedRating ? '★' : '☆';
+                        s.style.color = idx < selectedRating ? '#fbbf24' : '#ccc';
+                    });
+                });
+            });
+        }
+    }).then(async result => {
+        if (result.isConfirmed && result.value) {
+            // Submit feedback
+            try {
+                const resp = await apiPost(API_ENDPOINTS.FEEDBACK_SUBMIT, {
+                    order_id: orderId,
+                    rating: result.value.rating,
+                    comment: result.value.comment
+                });
+                // Update feedback cache
+                await loadUserFeedback();
+                // Refresh modal
+                viewOrderDetails(orderId);
+                Swal.fire({
+                    title: 'Thank You!',
+                    text: 'Your feedback has been submitted.',
+                    icon: 'success',
+                    confirmButtonText: 'Close'
+                });
+            } catch (err) {
+                Swal.fire({
+                    title: 'Error',
+                    text: err.message || 'Failed to submit feedback.',
+                    icon: 'error',
+                    confirmButtonText: 'Close'
+                });
+            }
+        }
+    });
+};
 
 /**
  * Cancel order
@@ -749,4 +751,411 @@ function logout() { return confirmLogout(); }
  */
 function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
+}
+/**
+ * Print order - opens receipt preview in new browser tab
+ */
+function printOrder(orderId) {
+    const order = allOrders.find(o => o.id === orderId);
+    if (!order) {
+        alert('Order not found');
+        return;
+    }
+
+    // Get items for this order
+    const items = order.items && Array.isArray(order.items) ? order.items : [];
+
+    // Calculate subtotal
+    const subtotal = order.total_amount - (order.tax_amount || 0) - (order.delivery_fee || 0);
+
+    // Create receipt HTML with print-optimized styles
+    const receiptHTML = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Receipt - Order #${order.order_number}</title>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                html {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    color-adjust: exact !important;
+                }
+                
+                body {
+                    font-family: Arial, sans-serif;
+                    background-color: #f5f5f5;
+                    padding: 10px;
+                    color: #333;
+                }
+
+                .container {
+                    max-width: 850px;
+                    margin: 0 auto;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    padding: 0;
+                    overflow: hidden;
+                }
+
+                .header {
+                    background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 100%);
+                    color: white;
+                    padding: 30px;
+                    text-align: center;
+                }
+
+                .header h1 {
+                    font-size: 24px;
+                    margin-bottom: 5px;
+                }
+
+                .header p {
+                    font-size: 13px;
+                    opacity: 0.95;
+                }
+
+                .content {
+                    padding: 30px;
+                }
+
+                .order-header {
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 6px;
+                    margin-bottom: 25px;
+                    border-left: 5px solid #ff6b6b;
+                }
+
+                .order-header h2 {
+                    font-size: 14px;
+                    color: #6b7280;
+                    margin-bottom: 8px;
+                    text-transform: uppercase;
+                }
+
+                .order-number {
+                    font-size: 28px;
+                    font-weight: bold;
+                    color: #1f2937;
+                }
+
+                .info-row {
+                    margin-bottom: 3px;
+                    font-size: 13px;
+                }
+
+                .info-label {
+                    color: #6b7280;
+                    font-weight: bold;
+                    display: inline-block;
+                    width: 120px;
+                }
+
+                .info-value {
+                    color: #1f2937;
+                }
+
+                .section-title {
+                    font-size: 12px;
+                    font-weight: bold;
+                    color: #6b7280;
+                    text-transform: uppercase;
+                    margin-top: 20px;
+                    margin-bottom: 12px;
+                    border-bottom: 2px solid #e5e7eb;
+                    padding-bottom: 8px;
+                }
+
+                .two-columns {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 20px;
+                    margin-bottom: 25px;
+                }
+
+                .items-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 15px 0;
+                    font-size: 13px;
+                }
+
+                .items-table thead {
+                    background-color: #e5e7eb;
+                }
+
+                .items-table th {
+                    padding: 10px;
+                    text-align: left;
+                    font-weight: bold;
+                    color: #1f2937;
+                    border: 1px solid #d1d5db;
+                }
+
+                .items-table td {
+                    padding: 10px;
+                    border: 1px solid #d1d5db;
+                }
+
+                .items-table tbody tr:nth-child(even) {
+                    background-color: #f9fafb;
+                }
+
+                .text-right {
+                    text-align: right;
+                }
+
+                .text-center {
+                    text-align: center;
+                }
+
+                .summary {
+                    margin-top: 20px;
+                    margin-left: auto;
+                    width: 350px;
+                }
+
+                .summary-row {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 8px 0;
+                    font-size: 13px;
+                    border-bottom: 1px solid #e5e7eb;
+                }
+
+                .summary-row.total {
+                    border-bottom: 3px solid #1f2937;
+                    border-top: 2px solid #1f2937;
+                    padding: 12px 0;
+                    font-size: 16px;
+                    font-weight: bold;
+                    color: #1f2937;
+                }
+
+                .label {
+                    color: #6b7280;
+                    font-weight: bold;
+                }
+
+                .value {
+                    color: #1f2937;
+                    font-weight: bold;
+                }
+
+                .buttons {
+                    display: flex;
+                    gap: 10px;
+                    justify-content: center;
+                    margin-top: 25px;
+                    padding-top: 20px;
+                }
+
+                .btn {
+                    padding: 10px 20px;
+                    border: none;
+                    border-radius: 5px;
+                    font-size: 13px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    transition: 0.3s;
+                }
+
+                .btn-print {
+                    background-color: #ff6b6b;
+                    color: white;
+                }
+
+                .btn-close {
+                    background-color: #d1d5db;
+                    color: #1f2937;
+                }
+
+                .footer {
+                    background-color: #f3f4f6;
+                    padding: 15px;
+                    text-align: center;
+                    font-size: 11px;
+                    color: #6b7280;
+                    border-top: 1px solid #e5e7eb;
+                    margin-top: 20px;
+                }
+
+                @page {
+                    size: A4;
+                    margin: 10mm;
+                }
+
+                @media print {
+                    * {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                        background-color: transparent !important;
+                    }
+
+                    html, body {
+                        width: 100%;
+                        height: 100%;
+                        margin: 0;
+                        padding: 0;
+                        background: white;
+                    }
+
+                    .container {
+                        max-width: 100%;
+                        margin: 0;
+                        padding: 0;
+                        box-shadow: none;
+                        border-radius: 0;
+                    }
+
+                    .content {
+                        padding: 15px;
+                    }
+
+                    .buttons {
+                        display: none !important;
+                    }
+
+                    .footer {
+                        display: none !important;
+                    }
+
+                    body {
+                        background: white;
+                    }
+
+                    .header {
+                        background: #ff6b6b !important;
+                        print-color-adjust: exact !important;
+                        -webkit-print-color-adjust: exact !important;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1><i class="fas fa-receipt"></i> Receipt</h1>
+                    <p>Food Ordering System</p>
+                </div>
+
+                <div class="content">
+                    <div class="order-header">
+                        <h2>Order Number</h2>
+                        <div class="order-number">#${order.order_number}</div>
+                    </div>
+
+                    <div class="two-columns">
+                        <div>
+                            <h3 class="section-title">Order Information</h3>
+                            <div class="info-row">
+                                <span class="info-label">Date Placed:</span>
+                                <span class="info-value">${new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Status:</span>
+                                <span class="info-value">${capitalize(order.status)}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Payment Status:</span>
+                                <span class="info-value">${capitalize(order.payment_status)}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="section-title">Delivery Information</h3>
+                            <div class="info-row">
+                                <span class="info-label">Address:</span>
+                            </div>
+                            <div class="info-value" style="margin-left: 0; margin-bottom: 10px; word-wrap: break-word;">${order.delivery_address || 'N/A'}</div>
+                            <div class="info-row">
+                                <span class="info-label">Payment Method:</span>
+                                <span class="info-value">${capitalize(order.payment_method)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="section-title">Order Items</h3>
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-right">Price</th>
+                                <th class="text-right">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${items.map(item => `
+                                <tr>
+                                    <td>${item.item_name}</td>
+                                    <td class="text-center">${item.quantity}</td>
+                                    <td class="text-right">$${parseFloat(item.price).toFixed(2)}</td>
+                                    <td class="text-right">$${parseFloat(item.subtotal).toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+
+                    <div class="summary">
+                        <div class="summary-row">
+                            <span class="label">Subtotal</span>
+                            <span class="value">$${subtotal.toFixed(2)}</span>
+                        </div>
+                        ${order.tax_amount ? `
+                            <div class="summary-row">
+                                <span class="label">Tax (10%)</span>
+                                <span class="value">$${parseFloat(order.tax_amount).toFixed(2)}</span>
+                            </div>
+                        ` : ''}
+                        ${order.delivery_fee ? `
+                            <div class="summary-row">
+                                <span class="label">Delivery Fee</span>
+                                <span class="value">$${parseFloat(order.delivery_fee).toFixed(2)}</span>
+                            </div>
+                        ` : ''}
+                        <div class="summary-row total">
+                            <span class="label">Total Amount</span>
+                            <span class="value">$${parseFloat(order.total_amount).toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <div class="buttons">
+                        <button class="btn btn-print" onclick="window.print(); return false;">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                        <button class="btn btn-close" onclick="window.close(); return false;">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <p>Thank you for your order! For support, please contact customer service.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    // Create blob URL for the receipt
+    const blob = new Blob([receiptHTML], { type: 'text/html' });
+    const blobUrl = URL.createObjectURL(blob);
+    
+    // Open receipt in new window without auto-printing
+    const printWindow = window.open(blobUrl, '_blank', 'width=900,height=1000');
+    
+    if (printWindow) {
+        printWindow.focus();
+    }
 }

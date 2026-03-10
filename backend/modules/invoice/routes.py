@@ -135,7 +135,7 @@ def get_all_invoices():
             """SELECT 
                 i.id, i.invoice_number, i.total_amount, i.invoice_date,
                 o.order_number, o.status as order_status,
-                u.full_name as customer_name, u.email as customer_email
+                u.username as customer_name, u.email as customer_email
             FROM invoices i
             JOIN orders o ON i.order_id = o.id
             JOIN users u ON i.user_id = u.id
@@ -170,7 +170,7 @@ def get_invoice_details(invoice_id):
                 o.id as order_id, o.order_number, o.status as order_status,
                 o.payment_method, o.payment_status, o.delivery_address,
                 o.created_at as order_date,
-                u.id as user_id, u.full_name as customer_name,
+                u.id as user_id, u.username as customer_name,
                 u.email as customer_email, u.phone as customer_phone,
                 u.address as customer_address
             FROM invoices i
@@ -231,7 +231,7 @@ def print_invoice(invoice_id):
                 o.id as order_id, o.order_number, o.status as order_status,
                 o.payment_method, o.payment_status, o.delivery_address,
                 o.created_at as order_date,
-                u.id as user_id, u.full_name as customer_name,
+                u.id as user_id,
                 u.email as customer_email, u.phone as customer_phone,
                 u.address as customer_address
             FROM invoices i

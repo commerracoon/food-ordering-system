@@ -7,7 +7,7 @@ from datetime import datetime
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from database import Database, dict_to_sql_insert
+from database import Database, dict_to_sql_insert, dict_to_sql_update
 from config import Config
 
 feedback_bp = Blueprint('feedback', __name__, url_prefix='/api/feedback')
@@ -100,7 +100,7 @@ def get_menu_item_feedback(menu_item_id):
         feedback_list = Database.execute_query(
             """SELECT 
                 f.id, f.rating, f.comment, f.created_at,
-                u.full_name as customer_name
+                u.email as customer_name
             FROM feedback f
             JOIN users u ON f.user_id = u.id
             WHERE f.menu_item_id = %s AND f.is_approved = TRUE
@@ -190,7 +190,7 @@ def get_all_feedback():
         query = """
             SELECT
                 f.id, f.rating, f.comment, f.is_approved, f.created_at,
-                u.full_name as customer_name, u.email as customer_email,
+                u.email as customer_email,
                 o.order_number,
                 m.name as menu_item_name
             FROM feedback f
@@ -285,6 +285,135 @@ def get_eligible_orders():
         )
 
         return jsonify({'orders': orders}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================
+# UPDATE FEEDBACK
+# ============================================
+
+@feedback_bp.route('/<int:feedback_id>', methods=['PUT'])
+def update_feedback_route(feedback_id):
+    """Update feedback (user or admin)"""
+    try:
+        # Check if user or admin is logged in
+        user_id = session.get('user_id')
+        user_type = session.get('user_type')
+        
+        if not user_id:
+            return jsonify({'error': 'Unauthorized'}), 401
+        
+        data = request.json
+        
+        # Check if feedback exists
+        feedback = Database.execute_query(
+            "SELECT id, user_id FROM feedback WHERE id = %s",
+            (feedback_id,),
+            fetch_one=True
+        )
+        
+        if not feedback:
+            return jsonify({'error': 'Feedback not found'}), 404
+        
+        # Check authorization (user can only edit their own feedback, admin can edit any)
+        if user_type == 'user' and feedback['user_id'] != user_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Prepare update data
+        allowed_fields = ['rating', 'comment']
+        update_data = {k: v for k, v in data.items() if k in allowed_fields}
+        
+        if not update_data:
+            return jsonify({'error': 'No valid fields to update'}), 400
+        
+        # Update feedback
+        query, values = dict_to_sql_update('feedback', update_data, 'id = %s', (feedback_id,))
+        Database.execute_query(query, values)
+        
+        return jsonify({'message': 'Feedback updated successfully'}), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================
+# DELETE FEEDBACK
+# ============================================
+
+@feedback_bp.route('/<int:feedback_id>', methods=['DELETE'])
+def delete_feedback_route(feedback_id):
+    """Delete feedback (user or admin)"""
+    try:
+        # Check if user or admin is logged in
+        user_id = session.get('user_id')
+        user_type = session.get('user_type')
+        
+        if not user_id:
+            return jsonify({'error': 'Unauthorized'}), 401
+        
+        # Check if feedback exists
+        feedback = Database.execute_query(
+            "SELECT id, user_id FROM feedback WHERE id = %s",
+            (feedback_id,),
+            fetch_one=True
+        )
+        
+        if not feedback:
+            return jsonify({'error': 'Feedback not found'}), 404
+        
+        # Check authorization (user can only delete their own feedback, admin can delete any)
+        if user_type == 'user' and feedback['user_id'] != user_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Delete feedback
+        Database.execute_query("DELETE FROM feedback WHERE id = %s", (feedback_id,))
+        
+        return jsonify({'message': 'Feedback deleted successfully'}), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================
+# LIST FEEDBACK (for admin via API)
+# ============================================
+
+@feedback_bp.route('/list', methods=['GET'])
+def list_feedback():
+    """Get all feedback for admin"""
+    try:
+        from common.middleware import get_token_from_request, decode_token
+        from flask import current_app
+        
+        # Check if admin is logged in (session or JWT token)
+        user_type = session.get('user_type')
+        
+        if not user_type:
+            # Try to get from JWT token in Authorization header
+            token = get_token_from_request()
+            if token:
+                payload = decode_token(token)
+                if payload:
+                    user_type = payload.get('user_type')
+        
+        if user_type != 'admin':
+            return jsonify({'error': 'Unauthorized. Admin access required'}), 403
+
+        feedback_list = Database.execute_query(
+            """SELECT
+                f.id, f.rating, f.comment, f.created_at,
+                u.email,
+                o.id as order_id
+            FROM feedback f
+            JOIN users u ON f.user_id = u.id
+            JOIN orders o ON f.order_id = o.id
+            ORDER BY f.created_at DESC""",
+            fetch_all=True
+        )
+
+        return jsonify({'feedback': feedback_list}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500

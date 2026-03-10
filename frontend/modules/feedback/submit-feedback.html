@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Feedback - Food Ordering System</title>
+
+    <script src="../../common/js/config.js"></script>
+    <script src="../../common/js/tailwind-theme.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <link rel="stylesheet" href="../../common/css/common.css">
+    <link rel="stylesheet" href="../../common/css/styles.css">
+
+    <script src="../../common/js/api.js" defer></script>
+    <script src="../../common/js/auth.js" defer></script>
+    <script src="../../common/js/utils.js" defer></script>
+    <script src="../../common/js/navbar.js" defer></script>
+    <script src="feedback.js" defer></script>
+</head>
+<body class="bg-gray-100">
+    <!-- Navbar will be initialized by navbar.js -->
+    <nav class="navbar" aria-hidden="true"></nav>
+
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h1 class="text-2xl font-bold mb-4">Give Feedback</h1>
+            <p class="text-gray-600 mb-6">Thank you for your order. Please rate your experience and leave a comment.</p>
+
+            <form id="feedback-form" class="space-y-4">
+                <div>
+                    <label class="block font-semibold mb-2">Select Order</label>
+                    <select id="order-select" class="w-full px-4 py-2 border rounded-lg" required>
+                        <option value="">Loading orders...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block font-semibold mb-2">Rating</label>
+                    <div id="star-picker" class="flex items-center gap-2" aria-label="Rating" role="radiogroup">
+                        <button type="button" class="star" data-value="1" aria-checked="false" role="radio">☆</button>
+                        <button type="button" class="star" data-value="2" aria-checked="false" role="radio">☆</button>
+                        <button type="button" class="star" data-value="3" aria-checked="false" role="radio">☆</button>
+                        <button type="button" class="star" data-value="4" aria-checked="false" role="radio">☆</button>
+                        <button type="button" class="star" data-value="5" aria-checked="false" role="radio">☆</button>
+                    </div>
+                    <input type="hidden" id="rating-select" required>
+                </div>
+
+                <div>
+                    <label class="block font-semibold mb-2">Comment (optional)</label>
+                    <textarea id="comment" rows="4" class="w-full px-4 py-2 border rounded-lg" placeholder="Tell us what you liked or what we can improve"></textarea>
+                </div>
+
+                <div class="flex justify-end">
+                    <button id="submit-btn" type="submit" class="bg-primary text-white px-6 py-2 rounded-lg">Submit Feedback</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

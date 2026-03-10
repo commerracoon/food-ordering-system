@@ -39,6 +39,9 @@ function setNavigationLinks() {
     const userOrderLink = document.getElementById('nav-user-order-link');
     if (userOrderLink) userOrderLink.href = `${basePath}/modules/order/menu.html`;
     
+    const userHistoryLink = document.getElementById('nav-user-history-link');
+    if (userHistoryLink) userHistoryLink.href = `${basePath}/modules/order/order-history.html`;
+    
     const userProfileLink = document.getElementById('nav-user-profile-link');
     if (userProfileLink) userProfileLink.href = `${basePath}/modules/user/profile.html`;
     
@@ -76,12 +79,13 @@ function initNavigation() {
         document.getElementById('nav-logout').style.display = 'block';
     } else if (isAuth && userType === 'user') {
         // User navigation
-        document.getElementById('nav-user-dashboard').style.display = 'block';
-        document.getElementById('nav-user-order').style.display = 'block';
-        document.getElementById('nav-user-profile').style.display = 'block';
-        document.getElementById('navbar-user-info').style.display = 'flex';
-        document.getElementById('navbar-username').textContent = userName;
-        document.getElementById('nav-logout').style.display = 'block';
+        const ndashboard = document.getElementById('nav-user-dashboard'); if (ndashboard) ndashboard.style.display = 'block';
+        const norder = document.getElementById('nav-user-order'); if (norder) norder.style.display = 'block';
+        const nhistory = document.getElementById('nav-user-history'); if (nhistory) nhistory.style.display = 'block';
+        const nprofile = document.getElementById('nav-user-profile'); if (nprofile) nprofile.style.display = 'block';
+        const nuserinfo = document.getElementById('navbar-user-info'); if (nuserinfo) nuserinfo.style.display = 'flex';
+        const nuname = document.getElementById('navbar-username'); if (nuname) nuname.textContent = userName;
+        const nlogout = document.getElementById('nav-logout'); if (nlogout) nlogout.style.display = 'block';
     } else {
         // Guest navigation
         document.getElementById('nav-guest').style.display = 'block';

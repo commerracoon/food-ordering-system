@@ -27,7 +27,7 @@ def register():
         data = request.json
         
         # Validate required fields
-        required_fields = ['username', 'email', 'password', 'full_name']
+        required_fields = ['username', 'email', 'password']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'error': f'{field} is required'}), 400
@@ -42,15 +42,14 @@ def register():
         if existing_user:
             return jsonify({'error': 'User with this email or username already exists'}), 409
         
-        # Hash password using pbkdf2:sha256 for compatibility
-        hashed_password = generate_password_hash(data['password'], method='pbkdf2:sha256')
+        # Hash password using default method for consistency
+        hashed_password = generate_password_hash(data['password'])
         
         # Prepare user data
         user_data = {
             'username': data['username'],
             'email': data['email'],
             'password': hashed_password,
-            'full_name': data['full_name'],
             'phone': data.get('phone', ''),
             'address': data.get('address', '')
         }
@@ -85,7 +84,7 @@ def login():
 
         # Get user from database - check both email and username
         user = Database.execute_query(
-            """SELECT id, username, email, password, full_name, phone, address,
+            """SELECT id, username, email, password, phone, address,
                       profile_image, is_active
                FROM users WHERE email = %s OR username = %s""",
             (login_identifier, login_identifier),
@@ -162,7 +161,7 @@ def get_profile():
 
         # Get user data
         user = Database.execute_query(
-            """SELECT id, username, email, full_name, phone, address,
+            """SELECT id, username, email, phone, address,
                       profile_image, created_at, updated_at
                FROM users WHERE id = %s""",
             (user_id,),
@@ -194,7 +193,7 @@ def update_profile():
         data = request.json
 
         # Prepare update data (only allowed fields)
-        allowed_fields = ['full_name', 'phone', 'address', 'profile_image']
+        allowed_fields = ['phone', 'address', 'profile_image']
         update_data = {k: v for k, v in data.items() if k in allowed_fields}
 
         if not update_data:

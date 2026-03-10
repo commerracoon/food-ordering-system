@@ -281,7 +281,7 @@ SELECT
     o.payment_status,
     o.created_at,
     u.id as user_id,
-    u.full_name as customer_name,
+    u.username as customer_name,
     u.email as customer_email,
     u.phone as customer_phone
 FROM orders o

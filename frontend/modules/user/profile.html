@@ -17,6 +17,7 @@
     <script src="../../common/js/api.js"></script>
     <script src="../../common/js/auth.js"></script>
     <script src="../../common/js/utils.js"></script>
+    <script src="../../common/js/navbar.js"></script>
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -27,20 +28,76 @@
     <!-- Tailwind theme loaded from common/tailwind-theme.js -->
 </head>
 <body class="bg-gray-100">
-    <!-- Header -->
-    <header style="background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);" class="text-white shadow-lg">
-        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold">My Profile</h1>
-            <div class="flex items-center gap-4">
-                <button onclick="window.location.href='dashboard.html'" class="logout-btn">
-                    Dashboard
-                </button>
-                <button onclick="confirmLogout()" class="logout-btn">
-                    Logout
-                </button>
-            </div>
+    <!-- Common Navigation Bar (unified style) -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="#" id="navbar-brand-link" class="navbar-brand">
+                <i class="fas fa-utensils"></i>
+                Food Ordering System
+            </a>
+
+            <ul class="navbar-menu" id="navbar-menu">
+                <!-- Guest Menu -->
+                <li id="nav-guest" style="display: none;">
+                    <a href="#" id="nav-home-link" class="navbar-link">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </li>
+                
+                <!-- User Menu -->
+                <li id="nav-user-dashboard" style="display: none;">
+                    <a href="#" id="nav-user-dashboard-link" class="navbar-link">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li id="nav-user-order" style="display: none;">
+                    <a href="#" id="nav-user-order-link" class="navbar-link">
+                        <i class="fas fa-shopping-cart"></i> Order Food
+                    </a>
+                </li>
+                <li id="nav-user-history" style="display: none;">
+                    <a href="#" id="nav-user-history-link" class="navbar-link">
+                        <i class="fas fa-history"></i> Order History
+                    </a>
+                </li>
+                <li id="nav-user-profile" style="display: none;">
+                    <a href="#" id="nav-user-profile-link" class="navbar-link">
+                        <i class="fas fa-user"></i> My Profile
+                    </a>
+                </li>
+
+                <!-- Admin Menu -->
+                <li id="nav-admin-dashboard" style="display: none;">
+                    <a href="#" id="nav-admin-dashboard-link" class="navbar-link">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li id="nav-admin-menu" style="display: none;">
+                    <a href="#" id="nav-admin-menu-link" class="navbar-link">
+                        <i class="fas fa-utensils"></i> Menu Management
+                    </a>
+                </li>
+
+                <!-- User Info & Actions -->
+                <li>
+                    <div class="navbar-user-info" id="navbar-user-info" style="display: none;">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="navbar-username"></span>
+                    </div>
+                </li>
+                <li id="nav-login" style="display: none;">
+                    <button class="navbar-button" onclick="navLogin()">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                </li>
+                <li id="nav-logout" style="display: none;">
+                    <button class="navbar-button" onclick="navLogout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </li>
+            </ul>
         </div>
-    </header>
+    </nav>
 
     <!-- Main Content -->
     <div class="container mx-auto px-4 py-8 max-w-4xl">
@@ -65,11 +122,6 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-gray-700 font-semibold mb-2">Full Name</label>
-                        <input type="text" id="full-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
-                    </div>
-                    
                     <div>
                         <label class="block text-gray-700 font-semibold mb-2">Phone</label>
                         <input type="tel" id="phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
@@ -113,7 +165,7 @@
                 </div>
 
                 <div class="flex justify-end">
-                    <button type="submit" class="bg-secondary text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all">
+                    <button type="submit" class="text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-all" style="background-color: var(--color-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
                         🔑 Update Password
                     </button>
                 </div>
@@ -154,7 +206,6 @@
                 // Populate form fields
                 document.getElementById('username').value = user.username || currentUser.userName;
                 document.getElementById('email').value = user.email || '';
-                document.getElementById('full-name').value = user.full_name || '';
                 document.getElementById('phone').value = user.phone || '';
                 document.getElementById('address').value = user.address || '';
 
@@ -174,7 +225,6 @@
                 showLoading('Updating profile...');
 
                 const profileData = {
-                    full_name: document.getElementById('full-name').value,
                     phone: document.getElementById('phone').value,
                     address: document.getElementById('address').value
                 };

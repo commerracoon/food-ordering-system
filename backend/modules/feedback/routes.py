@@ -8,6 +8,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from common import Database, dict_to_sql_insert
+from common.middleware import get_token_from_request, decode_token
 from config import Config
 
 feedback_bp = Blueprint('feedback', __name__, url_prefix='/api/feedback')
@@ -21,11 +22,25 @@ feedback_bp = Blueprint('feedback', __name__, url_prefix='/api/feedback')
 def submit_feedback():
     """Submit feedback for an order"""
     try:
-        # Check if user is logged in
-        if 'user_id' not in session or session.get('user_type') != 'user':
+        # Check if user is logged in (support both JWT and session)
+        user_id = None
+        user_type = None
+
+        # Try JWT token first
+        token = get_token_from_request()
+        if token:
+            payload = decode_token(token)
+            if payload:
+                user_id = payload.get('user_id')
+                user_type = payload.get('user_type')
+
+        # Fallback to session
+        if not user_id:
+            user_id = session.get('user_id')
+            user_type = session.get('user_type')
+
+        if not user_id or user_type != 'user':
             return jsonify({'error': 'Please login to submit feedback'}), 401
-        
-        user_id = session['user_id']
         data = request.json
         
         # Validate required fields
@@ -100,7 +115,7 @@ def get_menu_item_feedback(menu_item_id):
         feedback_list = Database.execute_query(
             """SELECT 
                 f.id, f.rating, f.comment, f.created_at,
-                u.full_name as customer_name
+                u.username as customer_name
             FROM feedback f
             JOIN users u ON f.user_id = u.id
             WHERE f.menu_item_id = %s AND f.is_approved = TRUE
@@ -147,15 +162,29 @@ def get_menu_item_feedback(menu_item_id):
 def get_my_feedback():
     """Get current user's feedback"""
     try:
-        # Check if user is logged in
-        if 'user_id' not in session or session.get('user_type') != 'user':
+        # Check if user is logged in (support both JWT and session)
+        user_id = None
+        user_type = None
+
+        # Try JWT token first
+        token = get_token_from_request()
+        if token:
+            payload = decode_token(token)
+            if payload:
+                user_id = payload.get('user_id')
+                user_type = payload.get('user_type')
+
+        # Fallback to session
+        if not user_id:
+            user_id = session.get('user_id')
+            user_type = session.get('user_type')
+
+        if not user_id or user_type != 'user':
             return jsonify({'error': 'Unauthorized'}), 401
-        
-        user_id = session['user_id']
         
         feedback_list = Database.execute_query(
             """SELECT 
-                f.id, f.rating, f.comment, f.is_approved, f.created_at,
+                f.id, f.order_id, f.rating, f.comment, f.is_approved, f.created_at,
                 o.order_number,
                 m.name as menu_item_name
             FROM feedback f
@@ -181,8 +210,21 @@ def get_my_feedback():
 def get_all_feedback():
     """Get all feedback (admin only)"""
     try:
-        # Check if admin is logged in
-        if session.get('user_type') != 'admin':
+        # Check if admin is logged in (support both JWT and session)
+        user_type = None
+
+        # Try JWT token first
+        token = get_token_from_request()
+        if token:
+            payload = decode_token(token)
+            if payload:
+                user_type = payload.get('user_type')
+
+        # Fallback to session
+        if not user_type:
+            user_type = session.get('user_type')
+
+        if user_type != 'admin':
             return jsonify({'error': 'Unauthorized. Admin access required'}), 403
 
         approved_only = request.args.get('approved', 'false').lower() == 'true'
@@ -190,7 +232,7 @@ def get_all_feedback():
         query = """
             SELECT
                 f.id, f.rating, f.comment, f.is_approved, f.created_at,
-                u.full_name as customer_name, u.email as customer_email,
+                u.username as customer_name, u.email as customer_email,
                 o.order_number,
                 m.name as menu_item_name
             FROM feedback f
@@ -216,8 +258,21 @@ def get_all_feedback():
 def approve_feedback(feedback_id):
     """Approve or reject feedback (admin only)"""
     try:
-        # Check if admin is logged in
-        if session.get('user_type') != 'admin':
+        # Check if admin is logged in (support both JWT and session)
+        user_type = None
+
+        # Try JWT token first
+        token = get_token_from_request()
+        if token:
+            payload = decode_token(token)
+            if payload:
+                user_type = payload.get('user_type')
+
+        # Fallback to session
+        if not user_type:
+            user_type = session.get('user_type')
+
+        if user_type != 'admin':
             return jsonify({'error': 'Unauthorized. Admin access required'}), 403
 
         data = request.json
@@ -241,8 +296,21 @@ def approve_feedback(feedback_id):
 def delete_feedback(feedback_id):
     """Delete feedback (admin only)"""
     try:
-        # Check if admin is logged in
-        if session.get('user_type') != 'admin':
+        # Check if admin is logged in (support both JWT and session)
+        user_type = None
+
+        # Try JWT token first
+        token = get_token_from_request()
+        if token:
+            payload = decode_token(token)
+            if payload:
+                user_type = payload.get('user_type')
+
+        # Fallback to session
+        if not user_type:
+            user_type = session.get('user_type')
+
+        if user_type != 'admin':
             return jsonify({'error': 'Unauthorized. Admin access required'}), 403
 
         Database.execute_query(
@@ -264,11 +332,25 @@ def delete_feedback(feedback_id):
 def get_eligible_orders():
     """Get orders that can receive feedback"""
     try:
-        # Check if user is logged in
-        if 'user_id' not in session or session.get('user_type') != 'user':
-            return jsonify({'error': 'Unauthorized'}), 401
+        # Check if user is logged in (support both JWT and session)
+        user_id = None
+        user_type = None
 
-        user_id = session['user_id']
+        # Try JWT token first
+        token = get_token_from_request()
+        if token:
+            payload = decode_token(token)
+            if payload:
+                user_id = payload.get('user_id')
+                user_type = payload.get('user_type')
+
+        # Fallback to session
+        if not user_id:
+            user_id = session.get('user_id')
+            user_type = session.get('user_type')
+
+        if not user_id or user_type != 'user':
+            return jsonify({'error': 'Unauthorized'}), 401
 
         # Get delivered orders without feedback
         orders = Database.execute_query(
@@ -285,6 +367,50 @@ def get_eligible_orders():
         )
 
         return jsonify({'orders': orders}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================
+# CHECK IF ORDER HAS FEEDBACK
+# ============================================
+
+@feedback_bp.route('/order/<int:order_id>/feedback', methods=['GET'])
+def get_order_feedback(order_id):
+    """Check if order has feedback from current user"""
+    try:
+        # Check if user is logged in (any user type is fine) - support both JWT and session
+        user_id = None
+
+        # Try JWT token first
+        token = get_token_from_request()
+        if token:
+            payload = decode_token(token)
+            if payload:
+                user_id = payload.get('user_id')
+
+        # Fallback to session
+        if not user_id:
+            user_id = session.get('user_id')
+
+        if not user_id:
+            return jsonify({'error': 'Unauthorized'}), 401
+        
+        # Get feedback for this order
+        feedback = Database.execute_query(
+            """SELECT 
+                f.id, f.rating, f.comment, f.is_approved, f.created_at
+            FROM feedback f
+            WHERE f.order_id = %s AND f.user_id = %s""",
+            (order_id, user_id),
+            fetch_one=True
+        )
+        
+        if feedback:
+            return jsonify({'has_feedback': True, 'feedback': feedback}), 200
+        else:
+            return jsonify({'has_feedback': False}), 200
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500

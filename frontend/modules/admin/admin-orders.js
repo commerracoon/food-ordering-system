@@ -216,3 +216,9 @@ function debouncedSearch(value) {
         loadAdminOrders(status, value);
     }, 400);
 }
+
+// Export to window scope for use in HTML onclick handlers
+if (typeof window !== 'undefined') {
+    window.loadAdminOrders = loadAdminOrders;
+    window.debouncedSearch = debouncedSearch;
+}

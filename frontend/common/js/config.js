@@ -42,7 +42,11 @@ const API_ENDPOINTS = {
     
     // Feedback endpoints
     FEEDBACK_SUBMIT: `${API_BASE_URL}/feedback/submit`,
-    FEEDBACK_LIST: `${API_BASE_URL}/feedback/list`,
+    FEEDBACK_MY: `${API_BASE_URL}/feedback/my-feedback`,
+    FEEDBACK_ORDER: (orderId) => `${API_BASE_URL}/feedback/order/${orderId}/feedback`,
+    ADMIN_FEEDBACK_CREATE: `${API_BASE_URL}/admin/feedback`,
+    FEEDBACK_LIST: `${API_BASE_URL}/admin/feedback/list`,
+    FEEDBACK_ELIGIBLE: `${API_BASE_URL}/feedback/eligible-orders`,
     
     // Health check
     HEALTH_CHECK: `${API_BASE_URL}/health`,

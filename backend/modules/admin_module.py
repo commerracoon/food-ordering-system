@@ -28,7 +28,7 @@ def register():
         data = request.json
         
         # Validate required fields
-        required_fields = ['username', 'email', 'password', 'full_name']
+        required_fields = ['username', 'email', 'password']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'error': f'{field} is required'}), 400
@@ -51,7 +51,6 @@ def register():
             'username': data['username'],
             'email': data['email'],
             'password': hashed_password,
-            'full_name': data['full_name'],
             'phone': data.get('phone', ''),
             'role': data.get('role', 'admin')  # Default role is 'admin'
         }
@@ -86,7 +85,7 @@ def login():
 
         # Get admin from database - check both email and username
         admin = Database.execute_query(
-            """SELECT id, username, email, password, full_name, phone, role,
+            """SELECT id, username, email, password, phone, role,
                       profile_image, is_active
                FROM admins WHERE email = %s OR username = %s""",
             (login_identifier, login_identifier),
@@ -159,7 +158,7 @@ def get_profile():
         
         # Get admin data
         admin = Database.execute_query(
-            """SELECT id, username, email, full_name, phone, role,
+            """SELECT id, username, email, phone, role,
                       profile_image, created_at, updated_at, last_login 
                FROM admins WHERE id = %s""",
             (admin_id,),
@@ -187,7 +186,7 @@ def update_profile():
         data = request.json
         
         # Prepare update data (only allowed fields)
-        allowed_fields = ['full_name', 'phone', 'profile_image']
+        allowed_fields = ['phone', 'profile_image']
         update_data = {k: v for k, v in data.items() if k in allowed_fields}
         
         if not update_data:
