@@ -510,8 +510,8 @@ async function viewOrderDetails(orderId) {
                 <button class="btn-small" style="background: #6b7280; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 500;" onclick="closeModal()">
                     <i class="fas fa-times"></i> Close
                 </button>
-                <button class="btn-small btn-primary" style="padding: 0.75rem 1.5rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;" onclick="window.print()">
-                    <i class="fas fa-print"></i> Print Receipt
+                <button class="btn-small btn-primary" style="padding: 0.75rem 1.5rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;" onclick="printOrder(${order.id})">
+                    <i class="fas fa-print"></i> Download Invoice
                 </button>
             </div>
         `;
@@ -753,7 +753,7 @@ function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 /**
- * Print order - opens receipt preview in new browser tab
+ * Print order - opens receipt in new browser tab with PDF download option
  */
 function printOrder(orderId) {
     const order = allOrders.find(o => o.id === orderId);
@@ -765,150 +765,155 @@ function printOrder(orderId) {
     // Get items for this order
     const items = order.items && Array.isArray(order.items) ? order.items : [];
 
-    // Calculate subtotal
-    const subtotal = order.total_amount - (order.tax_amount || 0) - (order.delivery_fee || 0);
+    // Calculate subtotal from items
+    const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.subtotal) || 0), 0);
 
-    // Create receipt HTML with print-optimized styles
+    // Create professional invoice-style receipt template
     const receiptHTML = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Receipt - Order #${order.order_number}</title>
+            <title>Invoice - Order #${order.order_number}</title>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
             <style>
                 * {
                     margin: 0;
                     padding: 0;
                     box-sizing: border-box;
                 }
-                
-                html {
-                    -webkit-print-color-adjust: exact !important;
-                    print-color-adjust: exact !important;
-                    color-adjust: exact !important;
-                }
-                
+
                 body {
-                    font-family: Arial, sans-serif;
-                    background-color: #f5f5f5;
-                    padding: 10px;
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    background-color: #f8f9fa;
+                    padding: 15px;
                     color: #333;
+                    line-height: 1.6;
                 }
 
-                .container {
-                    max-width: 850px;
+                .invoice-container {
+                    max-width: 900px;
                     margin: 0 auto;
                     background: white;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                    padding: 0;
+                    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+                    border-radius: 4px;
                     overflow: hidden;
                 }
 
-                .header {
-                    background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 100%);
+                /* Header Section */
+                .invoice-header {
+                    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
                     color: white;
-                    padding: 30px;
-                    text-align: center;
+                    padding: 40px 30px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
                 }
 
-                .header h1 {
-                    font-size: 24px;
-                    margin-bottom: 5px;
-                }
-
-                .header p {
-                    font-size: 13px;
-                    opacity: 0.95;
-                }
-
-                .content {
-                    padding: 30px;
-                }
-
-                .order-header {
-                    background: #f8f9fa;
-                    padding: 20px;
-                    border-radius: 6px;
-                    margin-bottom: 25px;
-                    border-left: 5px solid #ff6b6b;
-                }
-
-                .order-header h2 {
-                    font-size: 14px;
-                    color: #6b7280;
-                    margin-bottom: 8px;
-                    text-transform: uppercase;
-                }
-
-                .order-number {
+                .company-info h1 {
                     font-size: 28px;
-                    font-weight: bold;
-                    color: #1f2937;
+                    margin-bottom: 5px;
+                    font-weight: 700;
                 }
 
-                .info-row {
-                    margin-bottom: 3px;
-                    font-size: 13px;
-                }
-
-                .info-label {
-                    color: #6b7280;
-                    font-weight: bold;
-                    display: inline-block;
-                    width: 120px;
-                }
-
-                .info-value {
-                    color: #1f2937;
-                }
-
-                .section-title {
+                .company-info p {
                     font-size: 12px;
-                    font-weight: bold;
-                    color: #6b7280;
-                    text-transform: uppercase;
-                    margin-top: 20px;
-                    margin-bottom: 12px;
-                    border-bottom: 2px solid #e5e7eb;
-                    padding-bottom: 8px;
+                    opacity: 0.85;
+                    margin: 2px 0;
                 }
 
-                .two-columns {
+                .invoice-number {
+                    text-align: right;
+                }
+
+                .invoice-number .label {
+                    font-size: 11px;
+                    opacity: 0.8;
+                    text-transform: uppercase;
+                }
+
+                .invoice-number .value {
+                    font-size: 24px;
+                    font-weight: bold;
+                    margin-top: 5px;
+                }
+
+                /* Main Content */
+                .invoice-content {
+                    padding: 30px;
+                }
+
+                .info-section {
                     display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 20px;
-                    margin-bottom: 25px;
+                    grid-template-columns: 1fr 1fr 1fr;
+                    gap: 30px;
+                    margin-bottom: 30px;
+                    padding-bottom: 20px;
+                    border-bottom: 1px solid #e0e0e0;
+                }
+
+                .info-block h3 {
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    color: #666;
+                    margin-bottom: 12px;
+                    font-weight: 600;
+                    letter-spacing: 0.5px;
+                }
+
+                .info-block p {
+                    font-size: 13px;
+                    margin: 3px 0;
+                    color: #333;
+                }
+
+                .info-block .label {
+                    font-weight: 500;
+                    color: #555;
+                }
+
+                /* Items Table */
+                .items-section {
+                    margin-bottom: 30px;
+                }
+
+                .items-section h3 {
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    color: #666;
+                    margin-bottom: 15px;
+                    font-weight: 600;
+                    letter-spacing: 0.5px;
                 }
 
                 .items-table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin: 15px 0;
                     font-size: 13px;
                 }
 
                 .items-table thead {
-                    background-color: #e5e7eb;
+                    background-color: #f5f5f5;
+                    border-top: 2px solid #2c3e50;
+                    border-bottom: 2px solid #2c3e50;
                 }
 
                 .items-table th {
-                    padding: 10px;
+                    padding: 12px;
                     text-align: left;
-                    font-weight: bold;
-                    color: #1f2937;
-                    border: 1px solid #d1d5db;
+                    font-weight: 600;
+                    color: #333;
                 }
 
                 .items-table td {
-                    padding: 10px;
-                    border: 1px solid #d1d5db;
+                    padding: 12px;
+                    border-bottom: 1px solid #f0f0f0;
                 }
 
-                .items-table tbody tr:nth-child(even) {
-                    background-color: #f9fafb;
+                .items-table tbody tr:last-child td {
+                    border-bottom: 2px solid #2c3e50;
                 }
 
                 .text-right {
@@ -919,75 +924,118 @@ function printOrder(orderId) {
                     text-align: center;
                 }
 
-                .summary {
-                    margin-top: 20px;
-                    margin-left: auto;
-                    width: 350px;
+                /* Summary Section */
+                .summary-section {
+                    display: flex;
+                    justify-content: flex-end;
+                    margin-bottom: 30px;
+                }
+
+                .summary-box {
+                    width: 300px;
                 }
 
                 .summary-row {
                     display: flex;
                     justify-content: space-between;
-                    padding: 8px 0;
+                    padding: 10px 0;
                     font-size: 13px;
-                    border-bottom: 1px solid #e5e7eb;
+                    border-bottom: 1px solid #e0e0e0;
                 }
 
                 .summary-row.total {
-                    border-bottom: 3px solid #1f2937;
-                    border-top: 2px solid #1f2937;
-                    padding: 12px 0;
-                    font-size: 16px;
-                    font-weight: bold;
-                    color: #1f2937;
+                    background-color: #f5f5f5;
+                    border: 2px solid #2c3e50;
+                    padding: 12px;
+                    margin-top: 10px;
+                    font-size: 15px;
+                    font-weight: 700;
+                    color: #2c3e50;
                 }
 
-                .label {
-                    color: #6b7280;
-                    font-weight: bold;
+                .summary-row.subtotal {
+                    padding-top: 15px;
+                    font-weight: 500;
                 }
 
-                .value {
-                    color: #1f2937;
-                    font-weight: bold;
+                .summary-label {
+                    color: #555;
+                    font-weight: 500;
                 }
 
-                .buttons {
+                .summary-value {
+                    font-weight: 600;
+                    color: #333;
+                }
+
+                /* Footer */
+                .invoice-footer {
+                    background-color: #f8f9fa;
+                    padding: 25px 30px;
+                    text-align: center;
+                    border-top: 1px solid #e0e0e0;
+                }
+
+                .footer-text {
+                    font-size: 12px;
+                    color: #666;
+                    margin: 5px 0;
+                }
+
+                .thank-you {
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #2c3e50;
+                    margin-bottom: 8px;
+                }
+
+                /* Top Buttons */
+                #topButtons {
                     display: flex;
-                    gap: 10px;
+                    gap: 12px;
                     justify-content: center;
-                    margin-top: 25px;
-                    padding-top: 20px;
+                    margin-bottom: 20px;
+                    padding: 15px;
+                    background: #ecf0f1;
+                    border-radius: 4px;
                 }
 
                 .btn {
-                    padding: 10px 20px;
+                    padding: 11px 22px;
                     border: none;
-                    border-radius: 5px;
+                    border-radius: 4px;
                     font-size: 13px;
-                    font-weight: bold;
+                    font-weight: 600;
                     cursor: pointer;
-                    transition: 0.3s;
+                    transition: all 0.3s ease;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
                 }
 
-                .btn-print {
-                    background-color: #ff6b6b;
+                .btn-download {
+                    background-color: #27ae60;
                     color: white;
                 }
 
-                .btn-close {
-                    background-color: #d1d5db;
-                    color: #1f2937;
+                .btn-download:hover {
+                    background-color: #229954;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
                 }
 
-                .footer {
-                    background-color: #f3f4f6;
-                    padding: 15px;
-                    text-align: center;
-                    font-size: 11px;
-                    color: #6b7280;
-                    border-top: 1px solid #e5e7eb;
-                    margin-top: 20px;
+                .btn-close {
+                    background-color: #95a5a6;
+                    color: white;
+                }
+
+                .btn-close:hover {
+                    background-color: #7f8c8d;
+                    transform: translateY(-2px);
+                }
+
+                #receiptContent {
+                    background: white;
                 }
 
                 @page {
@@ -996,154 +1044,126 @@ function printOrder(orderId) {
                 }
 
                 @media print {
-                    * {
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
-                        color-adjust: exact !important;
-                        background-color: transparent !important;
-                    }
-
-                    html, body {
-                        width: 100%;
-                        height: 100%;
-                        margin: 0;
-                        padding: 0;
-                        background: white;
-                    }
-
-                    .container {
-                        max-width: 100%;
-                        margin: 0;
-                        padding: 0;
-                        box-shadow: none;
-                        border-radius: 0;
-                    }
-
-                    .content {
-                        padding: 15px;
-                    }
-
-                    .buttons {
-                        display: none !important;
-                    }
-
-                    .footer {
-                        display: none !important;
-                    }
-
                     body {
                         background: white;
+                        padding: 0;
                     }
-
-                    .header {
-                        background: #ff6b6b !important;
-                        print-color-adjust: exact !important;
-                        -webkit-print-color-adjust: exact !important;
+                    #topButtons {
+                        display: none !important;
                     }
                 }
             </style>
         </head>
         <body>
-            <div class="container">
-                <div class="header">
-                    <h1><i class="fas fa-receipt"></i> Receipt</h1>
-                    <p>Food Ordering System</p>
-                </div>
+            <div id="topButtons">
+                <button class="btn btn-download" onclick="downloadPDF()">
+                    <i class="fas fa-download"></i> Download Invoice
+                </button>
+                <button class="btn btn-close" onclick="window.close()">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
 
-                <div class="content">
-                    <div class="order-header">
-                        <h2>Order Number</h2>
-                        <div class="order-number">#${order.order_number}</div>
-                    </div>
-
-                    <div class="two-columns">
-                        <div>
-                            <h3 class="section-title">Order Information</h3>
-                            <div class="info-row">
-                                <span class="info-label">Date Placed:</span>
-                                <span class="info-value">${new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Status:</span>
-                                <span class="info-value">${capitalize(order.status)}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Payment Status:</span>
-                                <span class="info-value">${capitalize(order.payment_status)}</span>
-                            </div>
+            <div id="receiptContent">
+                <div class="invoice-container">
+                    <!-- Header -->
+                    <div class="invoice-header">
+                        <div class="company-info">
+                            <h1><i class="fas fa-utensils"></i> Food Ordering System</h1>
+                            <p>Premium Food Delivery Service</p>
+                            <p>Email: support@foodorder.com</p>
+                            <p>Phone: +1 (555) 123-4567</p>
                         </div>
-                        <div>
-                            <h3 class="section-title">Delivery Information</h3>
-                            <div class="info-row">
-                                <span class="info-label">Address:</span>
-                            </div>
-                            <div class="info-value" style="margin-left: 0; margin-bottom: 10px; word-wrap: break-word;">${order.delivery_address || 'N/A'}</div>
-                            <div class="info-row">
-                                <span class="info-label">Payment Method:</span>
-                                <span class="info-value">${capitalize(order.payment_method)}</span>
-                            </div>
+                        <div class="invoice-number">
+                            <div class="label">Invoice Number</div>
+                            <div class="value">#${order.order_number}</div>
                         </div>
                     </div>
 
-                    <h3 class="section-title">Order Items</h3>
-                    <table class="items-table">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th class="text-center">Qty</th>
-                                <th class="text-right">Price</th>
-                                <th class="text-right">Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${items.map(item => `
-                                <tr>
-                                    <td>${item.item_name}</td>
-                                    <td class="text-center">${item.quantity}</td>
-                                    <td class="text-right">$${parseFloat(item.price).toFixed(2)}</td>
-                                    <td class="text-right">$${parseFloat(item.subtotal).toFixed(2)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-
-                    <div class="summary">
-                        <div class="summary-row">
-                            <span class="label">Subtotal</span>
-                            <span class="value">$${subtotal.toFixed(2)}</span>
+                    <!-- Content -->
+                    <div class="invoice-content">
+                        <!-- Info Section -->
+                        <div class="info-section">
+                            <div class="info-block">
+                                <h3>Order Details</h3>
+                                <p><span class="label">Order Date:</span> ${new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                                <p><span class="label">Order Time:</span> ${new Date(order.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+                                <p><span class="label">Status:</span> ${capitalize(order.status)}</p>
+                            </div>
+                            <div class="info-block">
+                                <h3>Payment Info</h3>
+                                <p><span class="label">Payment Method:</span> ${capitalize(order.payment_method)}</p>
+                                <p><span class="label">Payment Status:</span> ${capitalize(order.payment_status)}</p>
+                                <p><span class="label">Reference:</span> ${order.id}</p>
+                            </div>
+                            <div class="info-block">
+                                <h3>Delivery Address</h3>
+                                <p>${order.delivery_address || 'Not specified'}</p>
+                            </div>
                         </div>
-                        ${order.tax_amount ? `
-                            <div class="summary-row">
-                                <span class="label">Tax (10%)</span>
-                                <span class="value">$${parseFloat(order.tax_amount).toFixed(2)}</span>
+
+                        <!-- Items Table -->
+                        <div class="items-section">
+                            <h3>Order Items</h3>
+                            <table class="items-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item Description</th>
+                                        <th class="text-center">Quantity</th>
+                                        <th class="text-right">Unit Price</th>
+                                        <th class="text-right">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${items.map(item => `
+                                        <tr>
+                                            <td>${item.item_name}</td>
+                                            <td class="text-center">${item.quantity} x</td>
+                                            <td class="text-right">$${parseFloat(item.price).toFixed(2)}</td>
+                                            <td class="text-right">$${parseFloat(item.subtotal).toFixed(2)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Summary Section -->
+                        <div class="summary-section">
+                            <div class="summary-box">
+                                <div class="summary-row subtotal">
+                                    <span class="summary-label">Subtotal:</span>
+                                    <span class="summary-value">$${subtotal.toFixed(2)}</span>
+                                </div>
+                                <div class="summary-row total">
+                                    <span class="summary-label">TOTAL AMOUNT:</span>
+                                    <span class="summary-value">$${parseFloat(order.total_amount).toFixed(2)}</span>
+                                </div>
                             </div>
-                        ` : ''}
-                        ${order.delivery_fee ? `
-                            <div class="summary-row">
-                                <span class="label">Delivery Fee</span>
-                                <span class="value">$${parseFloat(order.delivery_fee).toFixed(2)}</span>
-                            </div>
-                        ` : ''}
-                        <div class="summary-row total">
-                            <span class="label">Total Amount</span>
-                            <span class="value">$${parseFloat(order.total_amount).toFixed(2)}</span>
                         </div>
                     </div>
 
-                    <div class="buttons">
-                        <button class="btn btn-print" onclick="window.print(); return false;">
-                            <i class="fas fa-print"></i> Print
-                        </button>
-                        <button class="btn btn-close" onclick="window.close(); return false;">
-                            <i class="fas fa-times"></i> Close
-                        </button>
+                    <!-- Footer -->
+                    <div class="invoice-footer">
+                        <div class="thank-you">Thank you for your order!</div>
+                        <div class="footer-text">For inquiries or support, please contact us.</div>
+                        <div class="footer-text">We appreciate your business!</div>
                     </div>
-                </div>
-
-                <div class="footer">
-                    <p>Thank you for your order! For support, please contact customer service.</p>
                 </div>
             </div>
+
+            <script>
+                function downloadPDF() {
+                    const element = document.getElementById('receiptContent');
+                    const opt = {
+                        margin: [10, 10, 10, 10],
+                        filename: 'invoice_${order.order_number}.pdf',
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2, logging: false },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    };
+                    html2pdf().set(opt).from(element).save();
+                }
+            </script>
         </body>
         </html>
     `;
@@ -1152,10 +1172,13 @@ function printOrder(orderId) {
     const blob = new Blob([receiptHTML], { type: 'text/html' });
     const blobUrl = URL.createObjectURL(blob);
     
-    // Open receipt in new window without auto-printing
-    const printWindow = window.open(blobUrl, '_blank', 'width=900,height=1000');
+    // Open receipt in new window
+    const printWindow = window.open('', '_blank', 'width=900,height=1000');
     
     if (printWindow) {
-        printWindow.focus();
+        printWindow.document.write(receiptHTML);
+        printWindow.document.close();
+    } else {
+        alert('Please disable popup blocker to open the invoice.');
     }
 }

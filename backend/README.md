@@ -106,17 +106,81 @@ Server will start at: http://127.0.0.1:5000
 - Rate menu items (1-5 stars)
 - View feedback and ratings
 - Admin: Approve/reject/delete feedback
+- JWT token support for all endpoints
+
+## 📊 API Status
+
+### ✅ Fully Implemented Endpoints
+- `POST /api/user/register` - User registration
+- `POST /api/user/login` - User login with JWT token generation
+- `POST /api/admin/register` - Admin registration (super admin only)
+- `POST /api/admin/login` - Admin login with JWT token
+- `GET /api/order/categories` - Get menu categories
+- `GET /api/order/menu` - Get all menu items with ratings
+- `GET /api/order/menu/<id>` - Get menu item details and reviews
+- `GET /api/order/my-orders` - Get user's orders with items ⭐ (Recently fixed - NOW INCLUDES ITEMS)
+- `GET /api/order/order/<id>` - Get order details with items and customer info
+- `GET /api/order/all` - Get all orders (admin) with items ⭐ (Recently fixed - NOW INCLUDES ITEMS)
+- `POST /api/order/place` - Place a new order
+- `PUT /api/order/update-status/<id>` - Update order status (admin only)
+- `POST /api/admin/menu/add-category` - Add menu category (admin only)
+- `POST /api/admin/menu/add-item` - Add menu item (admin only)
+- `PUT /api/admin/menu/edit-item/<id>` - Edit menu item (admin only)
+- `DELETE /api/admin/menu/delete-item/<id>` - Delete menu item (admin only)
+- `GET /api/feedback/eligible-orders` - Get orders eligible for feedback
+- `POST /api/feedback/submit` - Submit feedback ⭐ (JWT + session support)
+- `GET /api/feedback/my-feedback` - Get user's feedback ⭐ (JWT + session support)
+- `GET /api/feedback/all` - Get all feedback (admin, JWT + session support ⭐)
+- `PUT /api/feedback/approve/<id>` - Approve feedback (admin, JWT + session support ⭐)
+- `DELETE /api/feedback/delete/<id>` - Delete feedback (admin, JWT + session support ⭐)
+- `GET /api/invoice/invoices` - Get invoices list
+- `GET /api/invoice/invoice/<id>` - Get invoice details
+- More... (see API_DOCUMENTATION.md for complete list)
 
 ## 🔐 Authentication
 
-The system uses **session-based authentication**:
+### Dual Authentication System
+The system now supports **both JWT tokens and session-based authentication**:
+
+#### Session-based Authentication (Legacy)
 - Login creates a session cookie
 - Session expires after 7 days
 - Logout clears the session
 
+#### JWT Token Authentication (Current)
+- Token-based stateless authentication
+- Token sent in `Authorization: Bearer <token>` header
+- Tokens stored in localStorage/sessionStorage
+- Fallback to session if JWT unavailable
+
 ### User Types
 - **user** - Regular customers
 - **admin** - Admin users with roles (super_admin, admin, manager)
+
+### Token Generation & Validation
+- Tokens generated on login
+- JWT validation on protected routes
+- Automatic fallback to session if token missing
+
+## 📊 Recent Updates & Fixes
+
+### Database Query Improvements (Current Session)
+- ✅ Added JOIN with `order_items` table in `get_my_orders` endpoint
+- ✅ Added JOIN with `order_items` table in `get_all_orders` endpoint
+- ✅ Fixed unknown column errors (removed non-existent tax_amount, delivery_fee)
+- ✅ Proper item grouping by order_id for API responses
+- ✅ Added missing fields: `delivery_address`, `customer_name`
+
+### Authentication Improvements
+- ✅ Updated all feedback routes to support JWT + session
+- ✅ Added token validation fallback mechanism
+- ✅ Proper authorization checks for admin routes
+
+### Known Issues Fixed
+- ✅ Item field was empty in orders API response
+- ✅ Tax and delivery fee columns don't exist in orders table
+- ✅ Feedback routes only supported session (no JWT)
+
 
 ## 🗄️ Database
 
@@ -126,12 +190,18 @@ The system uses **session-based authentication**:
 - `categories` - Food categories
 - `menu_items` - Menu items
 - `orders` - Customer orders
-- `order_items` - Order line items
-- `invoices` - Generated invoices
+- `order_items` - Order line items (now properly JOINed in GET endpoints ⭐)
+- `invoices` - Generated invoices (contains tax_amount and delivery_fee)
 - `feedback` - Customer feedback
 - `menu_item_ratings` - Aggregated ratings (auto-updated)
 - `user_sessions` - Active sessions
 - `activity_logs` - System activity logs
+
+### Important: Tax & Delivery Fee Columns
+⚠️ **Note**: Tax amount and delivery fee are stored in the `invoices` table, NOT in the `orders` table.
+- See `database/schema.sql` for full schema definitions
+- The orders table only contains basic order information
+- Related financial data is in the invoices table
 
 ### Default Admin Account
 ```

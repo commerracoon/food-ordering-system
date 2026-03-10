@@ -231,7 +231,7 @@ def place_order():
 
 @order_bp.route('/my-orders', methods=['GET'])
 def get_my_orders():
-    """Get current user's orders"""
+    """Get current user's orders with items"""
     try:
         # Check if user is logged in - support JWT token or session cookie
         user_id = None
@@ -257,13 +257,41 @@ def get_my_orders():
         orders = Database.execute_query(
             """SELECT
                 id, order_number, total_amount, status,
-                payment_method, payment_status, created_at, delivered_at
+                payment_method, payment_status, delivery_address, created_at, delivered_at
             FROM orders
             WHERE user_id = %s
             ORDER BY created_at DESC""",
             (user_id,),
             fetch_all=True
         )
+
+        # Get items for all orders
+        if orders:
+            order_ids = tuple(order['id'] for order in orders)
+            items_query = """SELECT
+                oi.order_id, oi.id, oi.quantity, oi.price, oi.subtotal, 
+                oi.special_request, m.name as item_name, 
+                m.description as item_description, m.image_url
+            FROM order_items oi
+            JOIN menu_items m ON oi.menu_item_id = m.id
+            WHERE oi.order_id IN ({})""".format(','.join(['%s']*len(order_ids)))
+            
+            items_list = Database.execute_query(items_query, order_ids, fetch_all=True)
+            
+            # Group items by order_id
+            items_by_order = {}
+            for item in items_list:
+                order_id = item['order_id']
+                if order_id not in items_by_order:
+                    items_by_order[order_id] = []
+                # Remove order_id from item dict before adding to list
+                item_copy = dict(item)
+                del item_copy['order_id']
+                items_by_order[order_id].append(item_copy)
+            
+            # Add items to each order
+            for order in orders:
+                order['items'] = items_by_order.get(order['id'], [])
 
         return jsonify({'orders': orders}), 200
 
@@ -346,7 +374,7 @@ def get_order_details(order_id):
 
 @order_bp.route('/all', methods=['GET'])
 def get_all_orders():
-    """Get all orders (admin only)"""
+    """Get all orders with items (admin only)"""
     try:
         # Check if admin is logged in - support JWT token or session cookie
         user_type = None
@@ -368,8 +396,8 @@ def get_all_orders():
         query = """
             SELECT
                 o.id, o.order_number, o.total_amount, o.status,
-                o.payment_method, o.payment_status, o.created_at,
-                u.phone as customer_phone
+                o.payment_method, o.payment_status, o.delivery_address,
+                o.created_at, u.phone as customer_phone, u.name as customer_name
             FROM orders o
             JOIN users u ON o.user_id = u.id
         """
@@ -382,6 +410,34 @@ def get_all_orders():
         query += " ORDER BY o.created_at DESC"
 
         orders = Database.execute_query(query, tuple(params) if params else None, fetch_all=True)
+
+        # Get items for all orders
+        if orders:
+            order_ids = tuple(order['id'] for order in orders)
+            items_query = """SELECT
+                oi.order_id, oi.id, oi.quantity, oi.price, oi.subtotal, 
+                oi.special_request, m.name as item_name, 
+                m.description as item_description, m.image_url
+            FROM order_items oi
+            JOIN menu_items m ON oi.menu_item_id = m.id
+            WHERE oi.order_id IN ({})""".format(','.join(['%s']*len(order_ids)))
+            
+            items_list = Database.execute_query(items_query, order_ids, fetch_all=True)
+            
+            # Group items by order_id
+            items_by_order = {}
+            for item in items_list:
+                order_id = item['order_id']
+                if order_id not in items_by_order:
+                    items_by_order[order_id] = []
+                # Remove order_id from item dict before adding to list
+                item_copy = dict(item)
+                del item_copy['order_id']
+                items_by_order[order_id].append(item_copy)
+            
+            # Add items to each order
+            for order in orders:
+                order['items'] = items_by_order.get(order['id'], [])
 
         return jsonify({'orders': orders}), 200
 
