@@ -354,11 +354,15 @@ def get_user(user_id):
 def update_user(user_id):
     """Update user details"""
     try:
+        print(f"[DEBUG] Update user {user_id} - request.is_json: {request.is_json}, files: {list(request.files.keys())}", flush=True)
+        
         # Handle both JSON and FormData
         if request.is_json:
             data = request.json
         else:
             data = request.form.to_dict()
+        
+        print(f"[DEBUG] Update data: {data}", flush=True)
         
         # Check if user exists
         user = Database.execute_query(
@@ -373,6 +377,8 @@ def update_user(user_id):
         # Prepare update data
         allowed_fields = ['phone', 'is_active']
         update_data = {k: v for k, v in data.items() if k in allowed_fields}
+        
+        print(f"[DEBUG] Filtered update_data: {update_data}", flush=True)
         
         # Handle profile image upload
         if 'profile_image' in request.files:
@@ -396,19 +402,24 @@ def update_user(user_id):
                 filepath = os.path.join(upload_dir, filename)
                 file.save(filepath)
                 update_data['profile_image'] = f"uploads/{filename}"
+                print(f"[DEBUG] Saved image to: {update_data['profile_image']}", flush=True)
         
         # Parse is_active if present
         if 'is_active' in update_data:
             is_active = update_data['is_active']
             if isinstance(is_active, str):
                 is_active = is_active.lower() in ('true', '1', 'yes', 'on')
+            else:
+                is_active = bool(int(is_active)) if isinstance(is_active, (int, str)) else bool(is_active)
             update_data['is_active'] = is_active
+            print(f"[DEBUG] Parsed is_active: {is_active} (type: {type(is_active)})", flush=True)
         
         if not update_data:
             return jsonify({'error': 'No valid fields to update'}), 400
         
         # Update user
         query, values = dict_to_sql_update('users', update_data, 'id = %s', (user_id,))
+        print(f"[DEBUG] SQL Query: {query}, Values: {values}", flush=True)
         Database.execute_query(query, values)
         
         # Return updated user
@@ -419,9 +430,13 @@ def update_user(user_id):
             fetch_one=True
         )
         
+        print(f"[DEBUG] Updated user: {updated_user}", flush=True)
         return jsonify({'message': 'User updated successfully', 'user': updated_user}), 200
     
     except Exception as e:
+        print(f"[ERROR] Update user error: {str(e)}", flush=True)
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 

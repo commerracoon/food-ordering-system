@@ -397,7 +397,7 @@ def get_all_orders():
             SELECT
                 o.id, o.order_number, o.total_amount, o.status,
                 o.payment_method, o.payment_status, o.delivery_address,
-                o.created_at, u.phone as customer_phone, u.name as customer_name
+                o.created_at, u.phone as customer_phone, u.username as customer_name
             FROM orders o
             JOIN users u ON o.user_id = u.id
         """

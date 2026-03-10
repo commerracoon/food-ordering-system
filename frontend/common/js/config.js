@@ -30,7 +30,7 @@ const API_ENDPOINTS = {
     ORDER_MENU: `${API_BASE_URL}/order/menu`,
     ORDER_PLACE: `${API_BASE_URL}/order/place`,
     ORDER_LIST: `${API_BASE_URL}/order/list`,
-    ORDER_DETAILS: `${API_BASE_URL}/order`,
+    ORDER_DETAILS: `${API_BASE_URL}/order/order`,
     // Admin order endpoints
     ADMIN_ORDER_LIST: `${API_BASE_URL}/order/all`,
     ORDER_UPDATE_STATUS: `${API_BASE_URL}/order/update-status`,
