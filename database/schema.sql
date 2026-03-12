@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    full_name VARCHAR(100) NOT NULL,
     phone VARCHAR(20),
     address TEXT,
     profile_image VARCHAR(255),
@@ -235,7 +234,7 @@ CREATE TABLE IF NOT EXISTS activity_logs (
 
 -- Insert default admin
 INSERT INTO admins (username, email, password, full_name, role) VALUES
-('admin', 'admin@foodorder.com', 'scrypt:32768:8:1$rnNUWv01iAROT9vY$9721ed75fdfac75dfb603eaab4ee021399cefb4f51eba689b933ac99a349a54fb8619a6c314ffc810983df74ca0b967b9635731f7827ddfe680dbbb8dc01bcb00', 'System Admin', 'super_admin');
+('admin', 'admin@foodorder.com', 'pbkdf2:sha256:600000$gFmZnwWnyPpJGdtn$eac6bc1bd22da0dcb8b9b38e5cfddcd0e146428b6d21e6490a6d1002f3b0a70a', 'System Admin', 'super_admin');
 -- Default password: admin123 (hashed with werkzeug scrypt)
 
 -- Insert default categories

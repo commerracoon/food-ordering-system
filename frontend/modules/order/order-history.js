@@ -140,7 +140,7 @@ async function loadOrders() {
     try {
         showLoading('Loading your orders...');
         
-        const endpoint = `${API_ENDPOINTS.ORDER_DETAILS}/my-orders`;
+        const endpoint = API_ENDPOINTS.ORDER_MY_ORDERS;
         const response = await apiGet(endpoint);
 
         allOrders = response.orders || [];
@@ -394,7 +394,7 @@ async function viewOrderDetails(orderId) {
     try {
         showLoading('Loading order details...');
 
-        const endpoint = `${API_ENDPOINTS.ORDER_DETAILS}/order/${orderId}`;
+        const endpoint = `${API_ENDPOINTS.ORDER_DETAILS}/${orderId}`;
         const response = await apiGet(endpoint);
 
         hideLoading();

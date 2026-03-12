@@ -182,7 +182,7 @@
         // Fetch latest orders for preview and render clickable cards
         async function loadRecentOrders(limit = 3) {
             try {
-                const endpoint = `${API_ENDPOINTS.ORDER_DETAILS}/my-orders`;
+                const endpoint = API_ENDPOINTS.ORDER_MY_ORDERS;
                 const resp = await apiGet(endpoint);
                 const orders = resp.orders || [];
                 if (!orders || orders.length === 0) {
