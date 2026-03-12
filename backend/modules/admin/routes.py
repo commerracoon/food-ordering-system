@@ -592,7 +592,7 @@ def get_feedback_list():
         feedback_list = Database.execute_query(
             """SELECT
                 f.id, f.rating, f.comment, f.created_at,
-                u.email,
+                u.username, u.email,
                 o.id as order_id
             FROM feedback f
             JOIN users u ON f.user_id = u.id
@@ -600,12 +600,11 @@ def get_feedback_list():
             ORDER BY f.created_at DESC""",
             fetch_all=True
         )
-        
+
         return jsonify({'feedback': feedback_list}), 200
-    
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 
 
 @admin_bp.route('/feedback/<int:feedback_id>', methods=['GET'])

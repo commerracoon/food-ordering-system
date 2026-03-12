@@ -400,8 +400,10 @@ def get_order_feedback(order_id):
         # Get feedback for this order
         feedback = Database.execute_query(
             """SELECT 
-                f.id, f.rating, f.comment, f.is_approved, f.created_at
+                f.id, f.rating, f.comment, f.is_approved, f.created_at,
+                u.username
             FROM feedback f
+            LEFT JOIN users u ON f.user_id = u.id
             WHERE f.order_id = %s AND f.user_id = %s""",
             (order_id, user_id),
             fetch_one=True

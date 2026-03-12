@@ -475,6 +475,23 @@ def update_order_status(order_id):
         if new_status not in valid_statuses:
             return jsonify({'error': 'Invalid status'}), 400
 
+        # Fetch current status
+        current_status_query = "SELECT status FROM orders WHERE id = %s"
+        current_status_result = Database.execute_query(current_status_query, (order_id,), fetch_one=True)
+        if not current_status_result:
+            return jsonify({'error': 'Order not found'}), 404
+        current_status = current_status_result['status']
+
+        # Enforce strict forward-only progression (except 'cancelled')
+        current_index = valid_statuses.index(current_status)
+        new_index = valid_statuses.index(new_status)
+        if new_status == 'cancelled':
+            # Allow cancelling at any stage except after 'delivered'
+            if current_status == 'delivered':
+                return jsonify({'error': 'Cannot cancel a delivered order'}), 400
+        elif new_index <= current_index:
+            return jsonify({'error': 'Cannot revert to a previous status'}), 400
+
         # Update order
         update_query = "UPDATE orders SET status = %s"
         params = [new_status]

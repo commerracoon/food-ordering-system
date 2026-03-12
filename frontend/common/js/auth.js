@@ -1,4 +1,20 @@
 /**
+ * Periodically check session status and auto-logout if expired
+ */
+function startSessionAutoCheck(intervalMs = 60000) {
+    setInterval(async () => {
+        const resp = await checkSession();
+        if (!resp.logged_in) {
+            await performLogout();
+        }
+    }, intervalMs);
+}
+
+// Start session auto-check on page load
+if (typeof window !== 'undefined') {
+    startSessionAutoCheck(); // Default: check every 60 seconds
+}
+/**
  * Authentication utilities for Food Ordering System
  * Handles login state, session management, and auth checks
  */

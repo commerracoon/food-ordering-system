@@ -123,86 +123,54 @@ function renderOrdersTable(orders) {
     const container = document.getElementById('orders-list');
     if (!container) return;
 
-    if (!orders || orders.length === 0) {
-        container.innerHTML = `
-            <div style="background-color: #DBEAFE; border: 1px solid #BFDBFE; border-radius: 6px; padding: 16px; text-align: center;">
-                <p style="color: #1E40AF;"><i class="fas fa-inbox"></i> No orders found</p>
-            </div>
+    const rows = orders.map(order => {
+        const statusColor = ORDER_STATUS_COLORS[order.status] || '#6B7280';
+        const totalAmount = parseFloat(order.total_amount) || 0; // Ensure total_amount is a number
+        return `
+            <tr style="border-bottom: 1px solid #E5E7EB;">
+                <td style="padding: 10px; text-align: center;">${order.order_number}</td>
+                <td style="padding: 10px; text-align: center;">${order.customer_name}</td>
+                <td style="padding: 10px; text-align: center;">${totalAmount.toFixed(2)}</td>
+                <td style="padding: 10px; text-align: center; color: ${statusColor}; font-weight: bold;">${capitalize(order.status)}</td>
+                <td style="padding: 10px; text-align: center;">
+                    <button class="edit-btn" data-id="${order.id}" data-status="${order.status}" style="background-color: #3B82F6; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">Edit</button>
+                    <button class="view-more-btn" data-id="${order.id}" style="background-color: #10B981; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; margin-left: 5px;">View More</button>
+                </td>
+            </tr>
         `;
-        return;
-    }
+    }).join('');
 
-    let html = `
-        <div style="overflow-x: auto; position: relative; z-index: 1;">
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead style="background-color: #F3F4F6;">
-                    <tr>
-                        <th style="padding: 12px; text-align: left; font-weight: 600; font-size: 14px;">Order #</th>
-                        <th style="padding: 12px; text-align: left; font-weight: 600; font-size: 14px;">Customer</th>
-                        <th style="padding: 12px; text-align: left; font-weight: 600; font-size: 14px;">Contact</th>
-                        <th style="padding: 12px; text-align: right; font-weight: 600; font-size: 14px;">Total</th>
-                        <th style="padding: 12px; text-align: center; font-weight: 600; font-size: 14px;">Status</th>
-                        <th style="padding: 12px; text-align: left; font-weight: 600; font-size: 14px;">Items</th>
-                        <th style="padding: 12px; text-align: left; font-weight: 600; font-size: 14px;">Created</th>
-                        <th style="padding: 12px; text-align: center; font-weight: 600; font-size: 14px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${orders.map(order => createOrderRow(order)).join('')}
-                </tbody>
-            </table>
-        </div>
+    container.innerHTML = `
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background-color: #F3F4F6;">
+                    <th style="padding: 10px; text-align: center;">Order #</th>
+                    <th style="padding: 10px; text-align: center;">Customer</th>
+                    <th style="padding: 10px; text-align: center;">Total</th>
+                    <th style="padding: 10px; text-align: center;">Status</th>
+                    <th style="padding: 10px; text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>
     `;
 
-    container.innerHTML = html;
-    attachOrderListeners();
-}
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const orderId = e.target.getAttribute('data-id');
+            const currentStatus = e.target.getAttribute('data-status');
+            showUpdateStatusModal(orderId, currentStatus);
+        });
+    });
 
-/**
- * Create HTML for a single order row
- */
-function createOrderRow(order) {
-    const itemsCount = (order.items && Array.isArray(order.items)) ? order.items.length : 0;
-    const statusColor = ORDER_STATUS_COLORS[order.status] || '#6B7280';
-    const createdDate = new Date(order.created_at);
-    const timeAgo = formatTimeAgo(createdDate);
-
-    return `
-        <tr style="border-bottom: 1px solid #E5E7EB; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#F9FAFB'" onmouseout="this.style.backgroundColor=''">
-            <td style="padding: 12px;"><strong style="color: #0284C7;">#${order.order_number || order.id}</strong></td>
-            <td style="padding: 12px; font-weight: 500;">${escapeHtml(order.customer_name || 'Unknown')}</td>
-            <td style="padding: 12px; font-size: 14px; color: #666;"><i class="fas fa-phone"></i> ${order.customer_phone || 'N/A'}</td>
-            <td style="padding: 12px; text-align: right; font-weight: 600;">$${parseFloat(order.total_amount || 0).toFixed(2)}</td>
-            <td style="padding: 12px; text-align: center;">
-                <span style="background-color: ${statusColor}; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">
-                    ${capitalize(order.status)}
-                </span>
-            </td>
-            <td style="padding: 12px;">
-                <span style="background-color: #DBEAFE; color: #1E40AF; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
-                    ${itemsCount} item${itemsCount !== 1 ? 's' : ''}
-                </span>
-            </td>
-            <td style="padding: 12px; font-size: 13px; color: #666;">${timeAgo}</td>
-            <td style="padding: 12px; text-align: center;">
-                <div style="display: flex; gap: 6px; justify-content: center;">
-                    <button style="padding: 6px 10px; background-color: #E0E7FF; color: #3730A3; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" 
-                            onclick="viewOrderDetails(${order.id})" title="View Details">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <div style="position: relative; display: inline-block;">
-                        <button style="padding: 6px 10px; background-color: #DBEAFE; color: #0284C7; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;" 
-                                class="order-status-btn" title="Update Status" data-order-id="${order.id}">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <div style="display: none; position: fixed; background: white; border: 1px solid #E5E7EB; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; min-width: 140px;" class="order-status-menu" data-order-id="${order.id}">
-                            ${createStatusOptions(order.id, order.status)}
-                        </div>
-                    </div>
-                </div>
-            </td>
-        </tr>
-    `;
+    document.querySelectorAll('.view-more-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const orderId = e.target.getAttribute('data-id');
+            viewOrderDetails(orderId);
+        });
+    });
 }
 
 /**
@@ -461,5 +429,61 @@ function escapeHtml(str) {
 function capitalize(str) {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// Add popup modal for updating order status
+function showUpdateStatusModal(orderId, currentStatus) {
+    // Remove any existing modal
+    const existingModal = document.getElementById('update-status-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // Determine the next status
+    const nextStatus = ORDER_STATUS_FLOW[currentStatus]?.next;
+
+    // If no next status, do not show the modal
+    if (!nextStatus) {
+        Swal.fire({
+            icon: 'info',
+            title: 'No Actions Available',
+            text: 'There are no further status updates available for this order.',
+            confirmButtonColor: '#3B82F6'
+        });
+        return;
+    }
+
+    // Create the modal HTML
+    const options = `<option value="${nextStatus}">${capitalize(nextStatus)}</option>`;
+
+    const modalHtml = `
+        <div id="update-status-modal" class="modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+            <div class="modal-content" style="background: white; padding: 20px; border-radius: 8px; width: 400px; max-width: 90%;">
+                <h2 style="margin-bottom: 20px;">Update Order Status</h2>
+                <label for="status-select" style="display: block; margin-bottom: 10px;">Select new status:</label>
+                <select id="status-select" style="width: 100%; padding: 10px; margin-bottom: 20px;">
+                    ${options}
+                </select>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button id="cancel-btn" style="padding: 10px 20px; background: #E5E7EB; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button id="update-btn" style="padding: 10px 20px; background: #3B82F6; color: white; border: none; border-radius: 4px; cursor: pointer;">Update</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Append the modal to the body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Add event listeners for the modal buttons
+    document.getElementById('cancel-btn').addEventListener('click', () => {
+        document.getElementById('update-status-modal').remove();
+    });
+
+    document.getElementById('update-btn').addEventListener('click', async () => {
+        const newStatus = document.getElementById('status-select').value;
+        await updateOrderStatus(orderId, newStatus);
+        document.getElementById('update-status-modal').remove();
+    });
 }
 
