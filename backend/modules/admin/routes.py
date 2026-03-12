@@ -593,7 +593,7 @@ def get_feedback_list():
             """SELECT
                 f.id, f.rating, f.comment, f.created_at,
                 u.username, u.email,
-                o.id as order_id
+                o.order_number as order_id
             FROM feedback f
             JOIN users u ON f.user_id = u.id
             JOIN orders o ON f.order_id = o.id
